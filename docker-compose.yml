@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: diplom_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - diplom_pgdata:/var/lib/postgresql/data
+
+volumes:
+  diplom_pgdata:
