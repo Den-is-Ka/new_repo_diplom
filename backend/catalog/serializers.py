@@ -1,24 +1,115 @@
 ﻿from rest_framework import serializers
-from .models import EquipmentType, EquipmentModule, CompatibilityRule
+from .models import EquipmentCategory, EquipmentPhysicalType, EquipmentModule, CompatibilityRule
 
-class EquipmentTypeSerializer(serializers.ModelSerializer):
+
+class EquipmentCategorySerializer(serializers.ModelSerializer):
+    """Сериализатор для категорий оборудования"""
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=EquipmentCategory.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    parent_name = serializers.CharField(source='parent.name', read_only=True)
+    children_count = serializers.IntegerField(source='children.count', read_only=True)
+    modules_count = serializers.IntegerField(source='modules_by_category.count', read_only=True)
+
     class Meta:
-        model = EquipmentType
-        fields = '__all__'
+        model = EquipmentCategory
+        fields = [
+            'id',
+            'name',
+            'parent',
+            'parent_name',
+            'equipment_type',
+            'description',
+            'order',
+            'code',
+            'is_active',
+            'children_count',
+            'modules_count',
+            # УДАЛИТЬ эту строку: 'created_at'
+        ]
+        read_only_fields = ['code']
+
+
+class EquipmentPhysicalTypeSerializer(serializers.ModelSerializer):
+    """Сериализатор для физических типов оборудования"""
+    modules_count = serializers.IntegerField(source='modules_by_type.count', read_only=True)
+
+    class Meta:
+        model = EquipmentPhysicalType
+        fields = [
+            'id',
+            'name',
+            'description',
+            'image',
+            'order',
+            'applicable_category',
+            'modules_count'
+        ]
+
 
 class EquipmentModuleSerializer(serializers.ModelSerializer):
-    equipment_type = EquipmentTypeSerializer(read_only=True)
-    equipment_type_id = serializers.PrimaryKeyRelatedField(
-        queryset=EquipmentType.objects.all(),
-        source='equipment_type',
+    """Сериализатор для модулей оборудования"""
+    category = EquipmentCategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=EquipmentCategory.objects.all(),
+        source='category',
         write_only=True
     )
-    
+
+    physical_type = EquipmentPhysicalTypeSerializer(read_only=True)
+    physical_type_id = serializers.PrimaryKeyRelatedField(
+        queryset=EquipmentPhysicalType.objects.all(),
+        source='physical_type',
+        write_only=True
+    )
+
+    display_price = serializers.CharField(read_only=True)
+
     class Meta:
         model = EquipmentModule
-        fields = '__all__'
+        fields = [
+            'id',
+            'name',
+            'category',
+            'category_id',
+            'physical_type',
+            'physical_type_id',
+            'applicable_to',
+            'description',
+            'price_type',
+            'price',
+            'display_price',
+            'main_image',
+            'power_consumption',
+            'dimensions',
+            'weight',
+            'specifications',
+            'is_active',
+            'is_default',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
 
 class CompatibilityRuleSerializer(serializers.ModelSerializer):
+    """Сериализатор для правил совместимости"""
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
     class Meta:
         model = CompatibilityRule
-        fields = '__all__'
+        fields = [
+            'id',
+            'name',
+            'rule_type',
+            'description',
+            'category',
+            'category_name',
+            'excluded_categories',
+            'modules',
+            'max_quantity',
+            'required_module',
+            'is_active'
+        ]

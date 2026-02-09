@@ -45,14 +45,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # РЎС‚РѕСЂРѕРЅРЅРёРµ РїСЂРёР»РѕР¶РµРЅРёСЏ
+
     "rest_framework",
     "rest_framework_simplejwt",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
     "whitenoise.runserver_nostatic",
-    # Р›РѕРєР°Р»СЊРЅС‹Рµ РїСЂРёР»РѕР¶РµРЅРёСЏ
+
     "users",
     "catalog",
     "configurator",
@@ -170,18 +170,30 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",  # Р”РѕР±Р°РІР»СЏРµРј РґР»СЏ Р°РґРјРёРЅРєРё
+        "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.AllowAny",  # РњРѕР¶РЅРѕ РёР·РјРµРЅРёС‚СЊ РЅР° IsAuthenticated РїРѕР·Р¶Рµ
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",  # Изменено для безопасности
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    # РџР°РіРёРЅР°С†РёСЏ (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+
+    # Важно для drf-spectacular
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
 }
 
 # JWT Settings
@@ -220,27 +232,50 @@ SIMPLE_JWT = {
 # Swagger/OpenAPI settings
 SPECTACULAR_SETTINGS = {
     "TITLE": "Diplom Container Configurator API",
-    "DESCRIPTION": "API РґР»СЏ РєРѕРЅС„РёРіСѓСЂР°С‚РѕСЂР° РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ Рё СЂР°СЃС‡РµС‚Р° СЃС‚РѕРёРјРѕСЃС‚Рё РєРѕРЅС‚РµР№РЅРµСЂР°",
+    "DESCRIPTION": "API для конфигуратора оборудования и расчета стоимости контейнера",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": r'/api/',
 
-    # РћРїС†РёРѕРЅР°Р»СЊРЅРѕ: РєСЂР°СЃРёРІС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ
+    # Важно для корректной генерации схемы
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX_TRIM": True,
+
+    # Настройки авторизации JWT
+    "SERVE_AUTHENTICATION": ["rest_framework.authentication.SessionAuthentication"],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "persistAuthorization": True,
         "displayOperationId": True,
+        "filter": True,
     },
+    "SWAGGER_UI_DIST": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest",
 
-    # РћРїС†РёРѕРЅР°Р»СЊРЅРѕ: РїРѕРґРґРµСЂР¶РєР° JWT РІ Swagger
-    "SECURITY": [{"Bearer": []}],
-    "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
+    # Настройки для JWT токенов (корректный формат)
+    "PREPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.preprocess_exclude_path_format",
+    ],
+
+    # Схема безопасности для JWT
+    "SECURITY": [
+        {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
         }
-    },
+    ],
+    "SECURITY_REQUIREMENTS": [
+        {"BearerAuth": []}
+    ],
+
+    # Дополнительные настройки для корректной работы
+    "ENUM_NAME_OVERRIDES": {},
+    "GENERIC_ADDITIONAL_PROPERTIES": "dict",
+
+    # Отключить обработку вьюсетов с ошибками (временно для дебага)
+    "ENFORCE_NON_BLANK_FIELDS": False,
 }
 
 # CORS Settings
