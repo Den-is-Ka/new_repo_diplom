@@ -30,7 +30,6 @@ class EquipmentCategory(models.Model):
     order = models.PositiveIntegerField(_("Порядок отображения"), default=0)
     is_active = models.BooleanField(_("Активна"), default=True)
 
-    # Для удобства навигации
     code = models.CharField(_("Код категории"), max_length=50, blank=True, help_text=_("Например: 1.1.1"))
 
     class Meta:
@@ -47,12 +46,10 @@ class EquipmentCategory(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Автоматически генерируем код на основе иерархии
         if not self.code and self.parent:
             siblings = EquipmentCategory.objects.filter(parent=self.parent).count()
             self.code = f"{self.parent.code}.{siblings + 1}"
         elif not self.code and not self.parent:
-            # Корневая категория
             roots = EquipmentCategory.objects.filter(parent__isnull=True).count()
             self.code = str(roots + 1)
         super().save(*args, **kwargs)
@@ -67,7 +64,6 @@ class EquipmentCategory(models.Model):
 
     @property
     def full_path(self):
-        """Полный путь категории"""
         path = []
         current = self
         while current:
@@ -76,8 +72,6 @@ class EquipmentCategory(models.Model):
         return " > ".join(path)
 
 
-# Оставляем существующий EquipmentType как "физический тип оборудования"
-# но переименуем его, чтобы не путать с EquipmentCategory
 class EquipmentPhysicalType(models.Model):
     """Физический тип оборудования (Процессор, Материнская плата и т.д.)"""
     name = models.CharField(_("Название типа"), max_length=100, unique=True)
@@ -85,7 +79,6 @@ class EquipmentPhysicalType(models.Model):
     image = models.ImageField(_("Изображение"), upload_to='equipment_types/', blank=True, null=True)
     order = models.PositiveIntegerField(_("Порядок отображения"), default=0)
 
-    # К какой категории ТЗ относится (ДГУ, Компрессор, Универсальный)
     applicable_category = models.CharField(
         _("Применимость"),
         max_length=20,
@@ -117,8 +110,6 @@ class EquipmentModule(models.Model):
 
     name = models.CharField(_("Название модуля"), max_length=200)
 
-    # Две связи:
-    # 1. К какой категории ТЗ относится (1.1.1, 1.2.2 и т.д.)
     category = models.ForeignKey(
         EquipmentCategory,
         on_delete=models.CASCADE,
@@ -127,7 +118,6 @@ class EquipmentModule(models.Model):
         help_text=_("Выберите категорию из иерархии ТЗ")
     )
 
-    # 2. К какому физическому типу относится
     physical_type = models.ForeignKey(
         EquipmentPhysicalType,
         on_delete=models.CASCADE,
@@ -136,7 +126,6 @@ class EquipmentModule(models.Model):
         help_text=_("Физический тип оборудования")
     )
 
-    # Применимость (для фильтрации)
     applicable_to = models.CharField(
         _("Применимость к оборудованию"),
         max_length=20,
@@ -146,7 +135,6 @@ class EquipmentModule(models.Model):
 
     description = models.TextField(_("Описание"), blank=True)
 
-    # Цена
     price_type = models.CharField(
         _("Тип цены"),
         max_length=20,
@@ -163,15 +151,12 @@ class EquipmentModule(models.Model):
         help_text=_("Заполняется только если price_type='fixed'")
     )
 
-    # Изображения
     main_image = models.ImageField(_("Основное изображение"), upload_to='modules/', blank=True, null=True)
 
-    # Технические характеристики
     power_consumption = models.IntegerField(_("Потребляемая мощность, Вт"), blank=True, null=True)
     dimensions = models.CharField(_("Габариты (ШхВхГ)"), max_length=100, blank=True)
     weight = models.DecimalField(_("Вес, кг"), max_digits=8, decimal_places=2, blank=True, null=True)
 
-    # Дополнительные характеристики в JSON
     specifications = models.JSONField(
         _("Технические характеристики"),
         default=dict,
@@ -179,7 +164,6 @@ class EquipmentModule(models.Model):
         help_text=_("Дополнительные характеристики в формате JSON")
     )
 
-    # Флаги
     is_active = models.BooleanField(_("Активен"), default=True)
     is_default = models.BooleanField(_("Выбран по умолчанию"), default=False)
 
@@ -199,16 +183,11 @@ class EquipmentModule(models.Model):
 
     @property
     def display_price(self):
-        """Форматированное отображение цены"""
         if self.price_type == self.PriceType.FIXED and self.price:
             return f"{self.price:.2f} руб."
         return dict(self.PriceType.choices)[self.price_type]
 
     def is_compatible_with(self, equipment_type):
-        """
-        Проверка совместимости с типом оборудования
-        equipment_type: 'DGU' или 'COMPRESSOR'
-        """
         if self.applicable_to == 'BOTH':
             return True
         return self.applicable_to == equipment_type
@@ -228,7 +207,6 @@ class CompatibilityRule(models.Model):
     rule_type = models.CharField(_("Тип правила"), max_length=20, choices=RuleType.choices)
     description = models.TextField(_("Описание правила"), blank=True)
 
-    # Для категорийной логики (из ТЗ: если выбран 1.1, то 1.2 недоступен)
     category = models.ForeignKey(
         EquipmentCategory,
         on_delete=models.CASCADE,
@@ -247,7 +225,6 @@ class CompatibilityRule(models.Model):
         help_text=_("Категории, которые становятся недоступными при выборе указанной категории")
     )
 
-    # Модули, к которым применяется правило
     modules = models.ManyToManyField(
         EquipmentModule,
         related_name='compatibility_rules',
@@ -255,7 +232,6 @@ class CompatibilityRule(models.Model):
         blank=True
     )
 
-    # Параметры правила
     max_quantity = models.PositiveIntegerField(
         _("Максимальное количество"),
         blank=True,
@@ -263,7 +239,6 @@ class CompatibilityRule(models.Model):
         help_text=_("Для rule_type='limit'")
     )
 
-    # Для требований: если выбран module A, то нужен module B
     required_module = models.ForeignKey(
         EquipmentModule,
         on_delete=models.CASCADE,
@@ -287,7 +262,6 @@ class CompatibilityRule(models.Model):
 class ContainerConfiguration(models.Model):
     """Конфигурация контейнера (раздел 3 ТЗ)"""
 
-    # 3.1) Габаритные размеры контейнера
     class Height(models.TextChoices):
         HEIGHT_1800 = '1800', '1800 мм'
         HEIGHT_2200 = '2200', '2200 мм'
@@ -309,28 +283,10 @@ class ContainerConfiguration(models.Model):
         WIDTH_3000 = '3000', '3000 мм'
         WIDTH_3400 = '3400', '3400 мм'
 
-    height = models.CharField(
-        "Высота",
-        max_length=10,
-        choices=Height.choices,
-        default=Height.HEIGHT_2600
-    )
+    height = models.CharField("Высота", max_length=10, choices=Height.choices, default=Height.HEIGHT_2600)
+    length = models.CharField("Длина", max_length=10, choices=Length.choices, default=Length.LENGTH_6000)
+    width = models.CharField("Ширина", max_length=10, choices=Width.choices, default=Width.WIDTH_2500)
 
-    length = models.CharField(
-        "Длина",
-        max_length=10,
-        choices=Length.choices,
-        default=Length.LENGTH_6000
-    )
-
-    width = models.CharField(
-        "Ширина",
-        max_length=10,
-        choices=Width.choices,
-        default=Width.WIDTH_2500
-    )
-
-    # 3.2) Тип исполнения контейнера
     class ContainerType(models.TextChoices):
         METAL = 'metal', 'Цельнометаллический'
         SANDWICH = 'sandwich', 'Каркасный + сендвич панели'
@@ -342,7 +298,6 @@ class ContainerConfiguration(models.Model):
         default=ContainerType.METAL
     )
 
-    # 3.3) Требуемая степень огнестойкости
     class FireResistance(models.TextChoices):
         GROUP_IV = 'IV', 'Группа огнестойкости IV'
         GROUP_III = 'III', 'Группа огнестойкости III'
@@ -355,7 +310,6 @@ class ContainerConfiguration(models.Model):
         default=FireResistance.GROUP_III
     )
 
-    # 3.4) Основание контейнера
     class InsulationThickness(models.TextChoices):
         THICK_100 = '100', '100 мм'
         THICK_150 = '150', '150 мм'
@@ -404,7 +358,6 @@ class ContainerConfiguration(models.Model):
         default=AdditionalFloor.NONE
     )
 
-    # 3.5) Крыша контейнера
     roof_insulation_thickness = models.CharField(
         "Толщина утеплителя крыши",
         max_length=10,
@@ -430,7 +383,6 @@ class ContainerConfiguration(models.Model):
         default=RoofSlope.SLOPED
     )
 
-    # 3.6) Стены контейнера
     wall_insulation_thickness = models.CharField(
         "Толщина утеплителя стен",
         max_length=10,
@@ -456,7 +408,6 @@ class ContainerConfiguration(models.Model):
         default=WallPanelType.PROFILED
     )
 
-    # 3.7) Эксплуатационное исполнение
     class OperationalType(models.TextChoices):
         GROUND_STATIONARY = 'ground', 'Наземное стационарное'
         HANGING_STATIONARY = 'hanging', 'Подвесное стационарное'
@@ -469,7 +420,6 @@ class ContainerConfiguration(models.Model):
         default=OperationalType.GROUND_STATIONARY
     )
 
-    # 3.8) Брендирование
     class Branding(models.TextChoices):
         REQUIRED = 'required', 'Требуется'
         NOT_REQUIRED = 'not_required', 'Не требуется'
@@ -481,7 +431,6 @@ class ContainerConfiguration(models.Model):
         default=Branding.NOT_REQUIRED
     )
 
-    # 3.9) Упаковка
     class Packaging(models.TextChoices):
         REQUIRED = 'required', 'Требуется'
         NOT_REQUIRED = 'not_required', 'Не требуется'
@@ -493,44 +442,16 @@ class ContainerConfiguration(models.Model):
         default=Packaging.REQUIRED
     )
 
-    # Дополнительные поля
-    name = models.CharField(
-        "Название конфигурации",
-        max_length=200,
-        default="Базовая конфигурация"
-    )
+    name = models.CharField("Название конфигурации", max_length=200, default="Базовая конфигурация")
+    description = models.TextField("Описание", blank=True)
 
-    description = models.TextField(
-        "Описание",
-        blank=True
-    )
+    base_price = models.DecimalField("Базовая цена контейнера", max_digits=12, decimal_places=2, default=0)
 
-    base_price = models.DecimalField(
-        "Базовая цена контейнера",
-        max_digits=12,
-        decimal_places=2,
-        default=0
-    )
+    is_active = models.BooleanField("Активна", default=True)
+    is_default = models.BooleanField("Конфигурация по умолчанию", default=False)
 
-    is_active = models.BooleanField(
-        "Активна",
-        default=True
-    )
-
-    is_default = models.BooleanField(
-        "Конфигурация по умолчанию",
-        default=False
-    )
-
-    created_at = models.DateTimeField(
-        "Дата создания",
-        auto_now_add=True
-    )
-
-    updated_at = models.DateTimeField(
-        "Дата обновления",
-        auto_now=True
-    )
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+    updated_at = models.DateTimeField("Дата обновления", auto_now=True)
 
     class Meta:
         ordering = ['name']
@@ -541,16 +462,13 @@ class ContainerConfiguration(models.Model):
         return f"{self.name} ({self.length}×{self.width}×{self.height})"
 
     def calculate_base_price(self):
-        """Расчет базовой цены"""
-        # Упрощенный расчет
         height_m = int(self.height) / 1000
         length_m = int(self.length) / 1000
         width_m = int(self.width) / 1000
         volume = height_m * length_m * width_m
 
-        base = volume * 50000  # 50 000 руб за м³
+        base = volume * 50000
 
-        # Модификаторы
         if self.container_type == 'sandwich':
             base *= 1.2
         if self.fire_resistance == 'II':
@@ -577,3 +495,111 @@ class ContainerConfiguration(models.Model):
         length_m = int(self.length) / 1000
         width_m = int(self.width) / 1000
         return round(height_m * length_m * width_m, 2)
+
+
+# =========================
+# Раздел 2 ТЗ: Инженерные системы
+# =========================
+
+class EngineeringSystemGroup(models.Model):
+    """Группа инженерных систем из ТЗ (2.1, 2.2, 2.3...)"""
+
+    class Key(models.TextChoices):
+        POWER_RELIABILITY = 'power_reliability', _("2.1 Надёжность энергоснабжения")
+        CLIMATE = 'climate', _("2.2 Климатическое исполнение")
+        LIGHTING = 'lighting', _("2.3 Освещение")
+        HEATING = 'heating', _("2.4 Отопление")
+        VENTILATION = 'ventilation', _("2.5 Вентиляция")
+        MICROCLIMATE_CONTROL = 'microclimate_control', _("2.6 Управление микроклиматом")
+        FIRE_ALARM = 'fire_alarm', _("2.7 Пожарная сигнализация")
+        FIRE_SUPPRESSION = 'fire_suppression', _("2.8 Пожаротушение")
+        DECISION_POINT = 'decision_point', _("2.9 Место принятия решения")
+
+    class SelectionMode(models.TextChoices):
+        SINGLE = 'single', _("Один вариант")
+        MULTI = 'multi', _("Несколько вариантов")
+
+    key = models.CharField(_("Ключ (для кода)"), max_length=64, choices=Key.choices, unique=True)
+    code = models.CharField(_("Код по ТЗ"), max_length=10, unique=True)
+    title = models.CharField(_("Название"), max_length=255)
+
+    selection_mode = models.CharField(
+        _("Режим выбора"),
+        max_length=8,
+        choices=SelectionMode.choices,
+        default=SelectionMode.SINGLE
+    )
+
+    order = models.PositiveIntegerField(_("Порядок отображения"), default=0)
+    is_active = models.BooleanField(_("Активно"), default=True)
+
+    class Meta:
+        verbose_name = _("Инженерные системы — группа")
+        verbose_name_plural = _("Инженерные системы — группы")
+        ordering = ['order', 'code']
+        indexes = [models.Index(fields=['is_active', 'order'])]
+
+    def __str__(self):
+        return f"{self.code} {self.title}"
+
+
+class EngineeringSystemOption(models.Model):
+    """Опция инженерной системы (2.1.1, 2.3.4...)"""
+
+    class Applicability(models.TextChoices):
+        BOTH = 'BOTH', _("ДГУ и Компрессор")
+        DGU = 'DGU', _("Только ДГУ")
+        COMPRESSOR = 'COMPRESSOR', _("Только Компрессор")
+
+    class PriceType(models.TextChoices):
+        FIXED = 'fixed', _("Фиксированная цена")
+        INDIVIDUAL = 'individual', _("Индивидуальный расчёт")
+        REQUEST = 'request', _("По запросу")
+
+    group = models.ForeignKey(
+        EngineeringSystemGroup,
+        on_delete=models.CASCADE,
+        related_name='options',
+        verbose_name=_("Группа")
+    )
+
+    code = models.CharField(_("Код по ТЗ"), max_length=16, unique=True)
+    title = models.CharField(_("Название"), max_length=255)
+
+    applicability = models.CharField(
+        _("Применимость"),
+        max_length=20,
+        choices=Applicability.choices,
+        default=Applicability.BOTH
+    )
+
+    price_type = models.CharField(
+        _("Тип цены"),
+        max_length=20,
+        choices=PriceType.choices,
+        default=PriceType.FIXED
+    )
+    price = models.DecimalField(
+        _("Цена, руб."),
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        blank=True,
+        null=True,
+        help_text=_("Заполняется только если price_type='fixed'")
+    )
+
+    order = models.PositiveIntegerField(_("Порядок отображения"), default=0)
+    is_active = models.BooleanField(_("Активно"), default=True)
+
+    class Meta:
+        verbose_name = _("Инженерные системы — опция")
+        verbose_name_plural = _("Инженерные системы — опции")
+        ordering = ['group__order', 'group__code', 'order', 'code']
+        indexes = [
+            models.Index(fields=['group', 'is_active']),
+            models.Index(fields=['code']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} {self.title}"

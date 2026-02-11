@@ -1,126 +1,145 @@
-﻿import uuid
-from django.db import models
-from django.contrib.auth import get_user_model
-from catalog.models import EquipmentCategory, EquipmentModule
+﻿from django.db import models
 from django.utils.translation import gettext_lazy as _
-
-User = get_user_model()
+from django.core.validators import MinValueValidator
+from django.conf import settings
+from decimal import Decimal
 
 
 class Configuration(models.Model):
-    """РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ"""
+    """Конфигурация оборудования пользователя"""
 
     class Status(models.TextChoices):
-        DRAFT = 'draft', _("Р§РµСЂРЅРѕРІРёРє")
-        SUBMITTED = 'submitted', _("РћС‚РїСЂР°РІР»РµРЅ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЋ")
-        PROCESSING = 'processing', _("Р’ РѕР±СЂР°Р±РѕС‚РєРµ")
-        QUOTED = 'quoted', _("РЎС‡РµС‚ РІС‹СЃС‚Р°РІР»РµРЅ")
-        COMPLETED = 'completed', _("Р—Р°РІРµСЂС€РµРЅ")
+        DRAFT = 'draft', _("Черновик")
+        SUBMITTED = 'submitted', _("Отправлен производителю")
+        PROCESSING = 'processing', _("В обработке")
+        QUOTED = 'quoted', _("Счет выставлен")
+        COMPLETED = 'completed', _("Завершен")
 
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='configurations',
-        verbose_name=_("РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ")
+        verbose_name=_("Пользователь")
     )
 
-    # Р’С‹Р±СЂР°РЅРЅР°СЏ РѕСЃРЅРѕРІРЅР°СЏ РєР°С‚РµРіРѕСЂРёСЏ (1.1 РёР»Рё 1.2 РёР· РўР—)
+    # Выбранная основная категория (1.1 или 1.2)
     main_category = models.ForeignKey(
-        EquipmentCategory,
+        'catalog.EquipmentCategory',
         on_delete=models.CASCADE,
         related_name='configurations',
-        verbose_name=_("РћСЃРЅРѕРІРЅРѕР№ С‚РёРї РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ"),
-        help_text=_("Р”Р“РЈ РёР»Рё РљРѕРјРїСЂРµСЃСЃРѕСЂРЅР°СЏ СѓСЃС‚Р°РЅРѕРІРєР°")
+        verbose_name=_("Основной тип оборудования"),
+        help_text=_("ДГУ или Компрессорная установка")
     )
 
-    # Р’С‹Р±СЂР°РЅРЅР°СЏ РїРѕРґРєР°С‚РµРіРѕСЂРёСЏ (1.1.1, 1.2.2 Рё С‚.Рґ.)
+    # Выбранная подкатегория (1.1.1, 1.2.2 и т.д.)
     sub_category = models.ForeignKey(
-        EquipmentCategory,
+        'catalog.EquipmentCategory',
         on_delete=models.CASCADE,
         related_name='sub_configurations',
-        verbose_name=_("РџРѕРґРєР°С‚РµРіРѕСЂРёСЏ"),
-        help_text=_("РљРѕРЅРєСЂРµС‚РЅР°СЏ С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРєР°, РЅР°РїСЂРёРјРµСЂ: Р”Р“РЈ РґРѕ 50 РєР’С‚")
+        verbose_name=_("Подкатегория"),
+        help_text=_("Конкретная характеристика, например: ДГУ до 50 кВт")
     )
 
-    # РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РєРѕРЅС‚РµР№РЅРµСЂР° (СЂР°Р·РґРµР» 3 РёР· РўР—)
+    # Конфигурация контейнера (пока как JSON как у тебя)
+    # Если хочешь по правильной схеме — потом заменим на FK к catalog.ContainerConfiguration.
     container_config = models.JSONField(
-        _("РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РєРѕРЅС‚РµР№РЅРµСЂР°"),
+        _("Конфигурация контейнера"),
         default=dict,
         blank=True,
-        help_text=_("РџР°СЂР°РјРµС‚СЂС‹ РєРѕРЅС‚РµР№РЅРµСЂР° РІ С„РѕСЂРјР°С‚Рµ JSON")
+        help_text=_("Параметры контейнера в формате JSON")
     )
 
-    # РќР°Р·РІР°РЅРёРµ Рё РѕРїРёСЃР°РЅРёРµ
-    name = models.CharField(_("РќР°Р·РІР°РЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё"), max_length=200)
-    description = models.TextField(_("РћРїРёСЃР°РЅРёРµ"), blank=True)
+    name = models.CharField(_("Название конфигурации"), max_length=200)
+    description = models.TextField(_("Описание"), blank=True)
 
-    # Р’С‹Р±СЂР°РЅРЅС‹Рµ РјРѕРґСѓР»Рё
+    # Выбранные модули оборудования
     modules = models.ManyToManyField(
-        EquipmentModule,
+        'catalog.EquipmentModule',
         through='ConfigurationModule',
         related_name='configurations',
-        verbose_name=_("Р’С‹Р±СЂР°РЅРЅС‹Рµ РјРѕРґСѓР»Рё")
+        verbose_name=_("Выбранные модули"),
+        blank=True
     )
 
-    # Р Р°СЃС‡РµС‚РЅС‹Рµ РїРѕР»СЏ
+    # Выбранные инженерные системы (раздел 2 ТЗ) — теперь через EngineeringSystemOption
+    engineering_systems = models.ManyToManyField(
+        'catalog.EngineeringSystemOption',
+        through='ConfigurationEngineeringSystem',
+        related_name='configurations',
+        verbose_name=_("Инженерные системы"),
+        blank=True
+    )
+
     total_price = models.DecimalField(
-        _("РћР±С‰Р°СЏ СЃС‚РѕРёРјРѕСЃС‚СЊ"),
+        _("Общая стоимость"),
         max_digits=12,
         decimal_places=2,
-        default=0
+        default=Decimal("0.00"),
     )
 
-    # РЎС‚Р°С‚СѓСЃ
     status = models.CharField(
-        _("РЎС‚Р°С‚СѓСЃ"),
+        _("Статус"),
         max_length=20,
         choices=Status.choices,
         default=Status.DRAFT
     )
 
     order_number = models.CharField(
-        _("РќРѕРјРµСЂ Р·Р°РєР°Р·Р°"),
+        _("Номер заказа"),
         max_length=50,
         blank=True
     )
 
-    # РљРѕРЅС‚Р°РєС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ (РёР· РўР—)
-    company_name = models.CharField(_("РќР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРµРґРїСЂРёСЏС‚РёСЏ"), max_length=200, blank=True)
-    phone = models.CharField(_("РўРµР»РµС„РѕРЅ"), max_length=20, blank=True)
+    company_name = models.CharField(_("Название предприятия"), max_length=200, blank=True)
+    phone = models.CharField(_("Телефон"), max_length=20, blank=True)
     email = models.EmailField(_("Email"), blank=True)
 
-    created_at = models.DateTimeField(_("Р”Р°С‚Р° СЃРѕР·РґР°РЅРёСЏ"), auto_now_add=True)
-    updated_at = models.DateTimeField(_("Р”Р°С‚Р° РѕР±РЅРѕРІР»РµРЅРёСЏ"), auto_now=True)
+    created_at = models.DateTimeField(_("Дата создания"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("Дата обновления"), auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
-        verbose_name = _("РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ")
-        verbose_name_plural = _("РљРѕРЅС„РёРіСѓСЂР°С†РёРё")
+        verbose_name = _("Конфигурация")
+        verbose_name_plural = _("Конфигурации")
 
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"
 
     def calculate_total_price(self):
-        """Р Р°СЃС‡РµС‚ РѕР±С‰РµР№ СЃС‚РѕРёРјРѕСЃС‚Рё"""
-        total = 0
-        for config_module in self.configurationmodule_set.all():
-            if config_module.module.price_type == EquipmentModule.PriceType.FIXED:
-                total += config_module.module.price * config_module.quantity
+        """Расчет общей стоимости (фиксированные цены)"""
+
+        # ВАЖНО: пока объект не сохранён, related-таблиц ещё нет
+        if not self.pk:
+            return Decimal("0.00")
+
+        total = Decimal("0.00")
+
+        # Модули
+        for item in self.module_items.select_related('module').all():
+            m = item.module
+            if m.price_type == 'fixed' and m.price is not None:
+                total += m.price * item.quantity  # Decimal * int = ок
+
+        # Инженерные системы
+        for item in self.engineering_items.select_related('engineering_system').all():
+            s = item.engineering_system
+            if s.price_type == 'fixed':
+                price = item.price_at_selection if item.price_at_selection is not None else (s.price or Decimal("0.00"))
+                total += price * item.quantity
+
         return total
 
     def save(self, *args, **kwargs):
-        # РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј main_category РЅР° РѕСЃРЅРѕРІРµ sub_category
+        # Автоматически выставляем main_category на основе sub_category
         if self.sub_category and not self.main_category:
-            # РќР°С…РѕРґРёРј СЂРѕРґРёС‚РµР»СЊСЃРєСѓСЋ РєР°С‚РµРіРѕСЂРёСЋ СѓСЂРѕРІРЅСЏ 1.1 РёР»Рё 1.2
             current = self.sub_category
-            while current.parent and current.parent.parent:  # РС‰РµРј РґРѕ РІС‚РѕСЂРѕРіРѕ СѓСЂРѕРІРЅСЏ
+            while current.parent and current.parent.parent:
                 current = current.parent
             self.main_category = current
 
-        # РџРµСЂРµСЃС‡РёС‚С‹РІР°РµРј С†РµРЅСѓ
         self.total_price = self.calculate_total_price()
 
-        # Р“РµРЅРµСЂРёСЂСѓРµРј РЅРѕРјРµСЂ Р·Р°РєР°Р·Р° РїСЂРё РѕС‚РїСЂР°РІРєРµ
+        # Генерация номера заказа при отправке
         if self.status == self.Status.SUBMITTED and not self.order_number:
             from django.utils import timezone
             date_str = timezone.now().strftime('%Y%m%d')
@@ -134,17 +153,77 @@ class Configuration(models.Model):
 
 
 class ConfigurationModule(models.Model):
-    """РЎРІСЏР·СЊ РєРѕРЅС„РёРіСѓСЂР°С†РёРё Рё РјРѕРґСѓР»РµР№ СЃ РєРѕР»РёС‡РµСЃС‚РІРѕРј"""
-    configuration = models.ForeignKey(Configuration, on_delete=models.CASCADE)
-    module = models.ForeignKey(EquipmentModule, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(_("РљРѕР»РёС‡РµСЃС‚РІРѕ"), default=1)
+    """Выбранный модуль в конфигурации"""
+    configuration = models.ForeignKey(
+        'configurator.Configuration',
+        on_delete=models.CASCADE,
+        related_name='module_items',
+    )
+    module = models.ForeignKey(
+        'catalog.EquipmentModule',
+        on_delete=models.PROTECT,
+        related_name='configuration_items',
+    )
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
 
     class Meta:
-        unique_together = [['configuration', 'module']]
-        verbose_name = _("РњРѕРґСѓР»СЊ РІ РєРѕРЅС„РёРіСѓСЂР°С†РёРё")
-        verbose_name_plural = _("РњРѕРґСѓР»Рё РІ РєРѕРЅС„РёРіСѓСЂР°С†РёСЏС…")
+        verbose_name = _("Выбранный модуль")
+        verbose_name_plural = _("Выбранные модули")
+        constraints = [
+            models.UniqueConstraint(fields=['configuration', 'module'], name='uniq_config_module')
+        ]
 
     def __str__(self):
-        return f"{self.configuration.name} - {self.module.name} (x{self.quantity})"
+        return f"{self.module} x{self.quantity}"
 
 
+class ConfigurationEngineeringSystem(models.Model):
+    """Выбранная инженерная система в конфигурации"""
+    configuration = models.ForeignKey(
+        'configurator.Configuration',
+        on_delete=models.CASCADE,
+        related_name='engineering_items'
+    )
+
+    engineering_system = models.ForeignKey(
+        'catalog.EngineeringSystemOption',
+        on_delete=models.PROTECT,
+        related_name='configuration_items'
+    )
+
+    quantity = models.PositiveIntegerField(
+        _("Количество"),
+        default=1,
+        validators=[MinValueValidator(1)]
+    )
+
+    custom_parameters = models.JSONField(
+        _("Пользовательские параметры"),
+        null=True,
+        blank=True,
+        help_text=_("Дополнительные настройки в формате JSON")
+    )
+
+    price_at_selection = models.DecimalField(
+        _("Цена на момент выбора"),
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = _("Выбранная инженерная система")
+        verbose_name_plural = _("Выбранные инженерные системы")
+        constraints = [
+            models.UniqueConstraint(fields=['configuration', 'engineering_system'], name='uniq_config_engineering')
+        ]
+
+    def __str__(self):
+        return f"{self.engineering_system} x{self.quantity}"
+
+    def save(self, *args, **kwargs):
+        # Сохраняем цену на момент выбора (если фиксированная)
+        if self.price_at_selection is None and self.engineering_system.price_type == 'fixed':
+            self.price_at_selection = self.engineering_system.price or Decimal("0.00")
+        super().save(*args, **kwargs)
