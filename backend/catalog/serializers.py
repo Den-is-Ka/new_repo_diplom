@@ -1,5 +1,13 @@
 ﻿from rest_framework import serializers
-from .models import EquipmentCategory, EquipmentPhysicalType, EquipmentModule, CompatibilityRule
+
+from .models import (
+    EquipmentCategory,
+    EquipmentPhysicalType,
+    EquipmentModule,
+    CompatibilityRule,
+    EngineeringSystemGroup,
+    EngineeringSystemOption,
+)
 
 
 class EquipmentCategorySerializer(serializers.ModelSerializer):
@@ -27,7 +35,6 @@ class EquipmentCategorySerializer(serializers.ModelSerializer):
             'is_active',
             'children_count',
             'modules_count',
-            # УДАЛИТЬ эту строку: 'created_at'
         ]
         read_only_fields = ['code']
 
@@ -113,3 +120,47 @@ class CompatibilityRuleSerializer(serializers.ModelSerializer):
             'required_module',
             'is_active'
         ]
+
+
+# =========================
+# Раздел 2 ТЗ: Инженерные системы
+# =========================
+
+class EngineeringSystemGroupSerializer(serializers.ModelSerializer):
+    """Группы инженерных систем (2.1–2.9)"""
+
+    class Meta:
+        model = EngineeringSystemGroup
+        fields = (
+            "id",
+            "key",
+            "code",
+            "title",
+            "selection_mode",
+            "order",
+            "is_active",
+        )
+        read_only_fields = fields
+
+
+class EngineeringSystemOptionSerializer(serializers.ModelSerializer):
+    """Опции инженерных систем (2.1.1, 2.1.2, …)"""
+    group_code = serializers.CharField(source="group.code", read_only=True)
+    group_title = serializers.CharField(source="group.title", read_only=True)
+
+    class Meta:
+        model = EngineeringSystemOption
+        fields = (
+            "id",
+            "group",
+            "group_code",
+            "group_title",
+            "code",
+            "title",
+            "applicability",
+            "price_type",
+            "price",
+            "order",
+            "is_active",
+        )
+        read_only_fields = fields

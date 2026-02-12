@@ -1,8 +1,9 @@
-﻿from django.db import models
-from django.utils.translation import gettext_lazy as _
-from django.core.validators import MinValueValidator
+﻿from decimal import Decimal
+
 from django.conf import settings
-from decimal import Decimal
+from django.core.validators import MinValueValidator
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class Configuration(models.Model):
@@ -40,8 +41,7 @@ class Configuration(models.Model):
         help_text=_("Конкретная характеристика, например: ДГУ до 50 кВт")
     )
 
-    # Конфигурация контейнера (пока как JSON как у тебя)
-    # Если хочешь по правильной схеме — потом заменим на FK к catalog.ContainerConfiguration.
+    # Конфигурация контейнера (пока как JSON)
     container_config = models.JSONField(
         _("Конфигурация контейнера"),
         default=dict,
@@ -61,7 +61,7 @@ class Configuration(models.Model):
         blank=True
     )
 
-    # Выбранные инженерные системы (раздел 2 ТЗ) — теперь через EngineeringSystemOption
+    # Выбранные инженерные системы (раздел 2 ТЗ)
     engineering_systems = models.ManyToManyField(
         'catalog.EngineeringSystemOption',
         through='ConfigurationEngineeringSystem',
@@ -105,10 +105,10 @@ class Configuration(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"
 
-    def calculate_total_price(self):
+    def calculate_total_price(self) -> Decimal:
         """Расчет общей стоимости (фиксированные цены)"""
 
-        # ВАЖНО: пока объект не сохранён, related-таблиц ещё нет
+        # пока объект не сохранён — related-таблиц ещё нет
         if not self.pk:
             return Decimal("0.00")
 
@@ -118,7 +118,7 @@ class Configuration(models.Model):
         for item in self.module_items.select_related('module').all():
             m = item.module
             if m.price_type == 'fixed' and m.price is not None:
-                total += m.price * item.quantity  # Decimal * int = ок
+                total += m.price * item.quantity  # Decimal * int
 
         # Инженерные системы
         for item in self.engineering_items.select_related('engineering_system').all():
@@ -137,9 +137,20 @@ class Configuration(models.Model):
                 current = current.parent
             self.main_category = current
 
-        self.total_price = self.calculate_total_price()
+        is_new = self.pk is None
+
+        # 1) сначала сохраняем объект, чтобы появился pk
+        super().save(*args, **kwargs)
+
+        # 2) затем пересчитываем total_price уже по related-таблицам
+        # (иначе при первом save total_price будет 0.00)
+        new_total = self.calculate_total_price()
+        if self.total_price != new_total:
+            self.total_price = new_total
+            super().save(update_fields=["total_price", "updated_at"])
 
         # Генерация номера заказа при отправке
+        # (делаем после сохранения, чтобы id/created_at точно были)
         if self.status == self.Status.SUBMITTED and not self.order_number:
             from django.utils import timezone
             date_str = timezone.now().strftime('%Y%m%d')
@@ -148,8 +159,7 @@ class Configuration(models.Model):
                 created_at__date=timezone.now().date()
             ).count()
             self.order_number = f"ORD-{date_str}-{count + 1:04d}"
-
-        super().save(*args, **kwargs)
+            super().save(update_fields=["order_number", "updated_at"])
 
 
 class ConfigurationModule(models.Model):
@@ -223,7 +233,7 @@ class ConfigurationEngineeringSystem(models.Model):
         return f"{self.engineering_system} x{self.quantity}"
 
     def save(self, *args, **kwargs):
-        # Сохраняем цену на момент выбора (если фиксированная)
+        # фикс “цена на момент выбора”: не сохраняем None для fixed
         if self.price_at_selection is None and self.engineering_system.price_type == 'fixed':
             self.price_at_selection = self.engineering_system.price or Decimal("0.00")
         super().save(*args, **kwargs)
