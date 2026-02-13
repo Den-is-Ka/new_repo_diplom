@@ -4,9 +4,9 @@ services:
     container_name: diplom_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
       - "5433:5432"
     volumes:
@@ -15,7 +15,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
     build:
@@ -29,32 +29,43 @@ services:
       - ./backend:/app
       - ./media:/app/media
       - ./static:/app/static
+      - ./staticfiles:/app/staticfiles
     environment:
-      # Database
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      DJANGO_IN_DOCKER: "1"
+
+      # DB_* (то, что ты хочешь использовать в settings.py)
+      DB_NAME: "${POSTGRES_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "db"
+      DB_PORT: "5432"
+
+      # POSTGRES_* (совместимость, чтобы старый код тоже работал)
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_HOST: "db"
+      POSTGRES_PORT: "5432"
+
       # Django
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DJANGO_DEBUG=${DJANGO_DEBUG}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
+      DJANGO_DEBUG: "${DJANGO_DEBUG}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS}"
+
       # Email (для разработки)
-      - EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+      EMAIL_BACKEND: "django.core.mail.backends.console.EmailBackend"
+
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "echo 'Waiting for database...' &&
-             sleep 5 &&
-             python manage.py makemigrations catalog --noinput &&
-             python manage.py migrate &&
-             mkdir -p /app/staticfiles &&  # создаем папку
-             python manage.py collectstatic --noinput &&
-             echo 'Starting Django development server...' &&
-             python manage.py runserver 0.0.0.0:8000"
+
+    command:
+      [
+        "sh",
+        "-c",
+        "set -e; echo 'DB is healthy, running migrations...'; python manage.py migrate --noinput; mkdir -p /app/staticfiles; python manage.py collectstatic --noinput; echo 'Starting Django dev server...'; python manage.py runserver 0.0.0.0:8000"
+      ]
 
 volumes:
   diplom_pgdata:
