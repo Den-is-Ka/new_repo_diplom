@@ -120,10 +120,12 @@ class EquipmentModule(models.Model):
 
     physical_type = models.ForeignKey(
         EquipmentPhysicalType,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='modules_by_type',
         verbose_name=_("Физический тип"),
-        help_text=_("Физический тип оборудования")
+        help_text=_("Физический тип оборудования (опционально на текущем этапе)")
     )
 
     applicable_to = models.CharField(

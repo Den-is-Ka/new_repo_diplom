@@ -69,7 +69,9 @@ class EquipmentModuleSerializer(serializers.ModelSerializer):
     physical_type_id = serializers.PrimaryKeyRelatedField(
         queryset=EquipmentPhysicalType.objects.all(),
         source='physical_type',
-        write_only=True
+        write_only=True,
+        required=False,
+        allow_null=True,
     )
 
     display_price = serializers.CharField(read_only=True)
