@@ -1,189 +1,170 @@
 ﻿from rest_framework import serializers
-from .models import Configuration, ConfigurationModule
-from catalog.models import EquipmentCategory, EquipmentModule
-from users.serializers import UserSerializer
+
+from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
+from .models import Configuration, ConfigurationModule, ConfigurationEngineeringSystem
 
 
-class ConfigurationSerializer(serializers.ModelSerializer):
-    """Сериализатор для вывода конфигурации"""
-    user = UserSerializer(read_only=True)
-    main_category = serializers.StringRelatedField(read_only=True)
-    sub_category = serializers.StringRelatedField(read_only=True)
-    modules = serializers.StringRelatedField(many=True, read_only=True)
-    
-    class Meta:
-        model = Configuration
-        fields = [
-            'id', 
-            'name', 
-            'description', 
-            'status',
-            'user', 
-            'main_category', 
-            'sub_category', 
-            'modules',
-            'total_price', 
-            'container_config',
-            'company_name',
-            'phone',
-            'email',
-            'order_number',
-            'created_at', 
-            'updated_at'
-        ]
-        read_only_fields = [
-            'id', 
-            'status', 
-            'total_price',
-            'order_number', 
-            'created_at', 
-            'updated_at'
-        ]
+class ConfigurationModuleWriteSerializer(serializers.Serializer):
+    module_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1, default=1)
 
 
-class ConfigurationCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания/обновления конфигурации"""
-    main_category_id = serializers.PrimaryKeyRelatedField(
-        queryset=EquipmentCategory.objects.filter(parent__isnull=False, parent__parent__isnull=True),
-        source='main_category',
-        write_only=True,
-        required=False,
-        help_text="ID основной категории (1.1 или 1.2)"
-    )
-    
-    sub_category_id = serializers.PrimaryKeyRelatedField(
-        queryset=EquipmentCategory.objects.filter(parent__isnull=False, parent__parent__isnull=False),
-        source='sub_category',
-        write_only=True,
-        required=True,
-        help_text="ID подкатегории (1.1.1, 1.2.2 и т.д.)"
-    )
-    
-    module_ids = serializers.PrimaryKeyRelatedField(
-        queryset=EquipmentModule.objects.filter(is_active=True),
-        many=True,
-        source='modules',
-        write_only=True,
-        required=False
-    )
-    
-    container_config = serializers.JSONField(
-        required=False,
-        help_text="онфигурация контейнера в формате JSON"
-    )
-
-    class Meta:
-        model = Configuration
-        fields = [
-            'id', 
-            'name', 
-            'description',
-            'main_category_id', 
-            'sub_category_id', 
-            'module_ids',
-            'container_config',
-            'company_name',
-            'phone',
-            'email'
-        ]
-
-    def validate(self, data):
-        """алидация данных конфигурации"""
-        # роверяем, что подкатегория принадлежит основной категории
-        sub_category = data.get('sub_category')
-        main_category = data.get('main_category')
-        
-        if sub_category and not main_category:
-            # аходим основную категорию автоматически
-            current = sub_category
-            while current.parent and current.parent.parent:
-                current = current.parent
-            data['main_category'] = current
-        elif sub_category and main_category:
-            # роверяем соответствие
-            current = sub_category
-            while current.parent and current.parent != main_category and current.parent.parent:
-                current = current.parent
-            
-            if current.parent != main_category:
-                raise serializers.ValidationError({
-                    'sub_category_id': 'ыбранная подкатегория не принадлежит указанной основной категории'
-                })
-        
-        # роверяем совместимость модулей с выбранной категорией
-        modules = data.get('modules', [])
-        equipment_type = data.get('main_category').equipment_type if data.get('main_category') else None
-        
-        if equipment_type and modules:
-            for module in modules:
-                if not module.is_compatible_with(equipment_type):
-                    raise serializers.ValidationError({
-                        'module_ids': f'одуль "{module.name}" не совместим с выбранным типом оборудования'
-                    })
-        
-        return data
-
-    def create(self, validated_data):
-        # обавляем текущего пользователя
-        validated_data['user'] = self.context['request'].user
-        
-        # звлекаем модули
-        modules = validated_data.pop('modules', [])
-        
-        # Создаем конфигурацию
-        configuration = Configuration.objects.create(**validated_data)
-        
-        # обавляем модули
-        for module in modules:
-            ConfigurationModule.objects.create(
-                configuration=configuration,
-                module=module,
-                quantity=1
-            )
-        
-        # ересчитываем цену
-        configuration.total_price = configuration.calculate_total_price()
-        configuration.save()
-        
-        return configuration
-
-
-class ConfigurationModuleSerializer(serializers.ModelSerializer):
-    """Сериализатор для связи конфигурации и модулей"""
-    module_name = serializers.CharField(source='module.name', read_only=True)
-    module_price = serializers.DecimalField(
-        source='module.price', 
-        max_digits=10, 
+class ConfigurationEngineeringWriteSerializer(serializers.Serializer):
+    engineering_system_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1, default=1)
+    custom_parameters = serializers.JSONField(required=False, allow_null=True)
+    price_at_selection = serializers.DecimalField(
+        max_digits=12,
         decimal_places=2,
-        read_only=True
+        required=False,
+        allow_null=True,
     )
-    module_price_type = serializers.CharField(
-        source='module.price_type',
-        read_only=True
-    )
+
+
+class ConfigurationModuleReadSerializer(serializers.ModelSerializer):
+    module = serializers.IntegerField(source="module_id", read_only=True)
+    quantity = serializers.IntegerField()
 
     class Meta:
         model = ConfigurationModule
-        fields = [
-            'id',
-            'configuration',
-            'module',
-            'module_name',
-            'module_price',
-            'module_price_type',
-            'quantity'
-        ]
+        fields = ("module", "quantity")
 
 
-class ConfigurationValidateSerializer(serializers.Serializer):
-    """Сериализатор для валидации конфигурации"""
-    is_valid = serializers.BooleanField(read_only=True)
-    errors = serializers.ListField(
-        child=serializers.CharField(),
-        read_only=True
+class ConfigurationEngineeringReadSerializer(serializers.ModelSerializer):
+    engineering_system = serializers.IntegerField(source="engineering_system_id", read_only=True)
+    quantity = serializers.IntegerField()
+    custom_parameters = serializers.JSONField(required=False, allow_null=True)
+    price_at_selection = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+
+    class Meta:
+        model = ConfigurationEngineeringSystem
+        fields = ("engineering_system", "quantity", "custom_parameters", "price_at_selection")
+
+
+class ConfigurationSerializer(serializers.ModelSerializer):
+    # ✅ FK -> отдаём как id (а не объект)
+    main_category = serializers.IntegerField(source="main_category_id", read_only=True)
+
+    # sub_category можно менять руками, валидируем существование
+    sub_category = serializers.PrimaryKeyRelatedField(
+        queryset=EquipmentCategory.objects.all(),
+        required=False,
+        allow_null=True,
     )
-    total_price = serializers.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        read_only=True
-    )
+
+    # READ: отдаём выбранные позиции
+    modules = ConfigurationModuleReadSerializer(source="module_items", many=True, read_only=True)
+    engineering_systems = ConfigurationEngineeringReadSerializer(source="engineering_items", many=True, read_only=True)
+
+    # WRITE: принимаем payload списков
+    modules_payload = ConfigurationModuleWriteSerializer(many=True, write_only=True, required=False)
+    engineering_systems_payload = ConfigurationEngineeringWriteSerializer(many=True, write_only=True, required=False)
+
+    class Meta:
+        model = Configuration
+        fields = (
+            "id",
+            "user",
+            "name",
+            "description",
+            "status",
+            "order_number",
+            "company_name",
+            "phone",
+            "email",
+            "main_category",
+            "sub_category",
+            "container_config",
+            "modules",
+            "engineering_systems",
+            "modules_payload",
+            "engineering_systems_payload",
+            "total_price",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "user",
+            "order_number",
+            "total_price",
+            "created_at",
+            "updated_at",
+            "main_category",
+            "modules",
+            "engineering_systems",
+        )
+
+    def create(self, validated_data):
+        modules_payload = validated_data.pop("modules_payload", [])
+        eng_payload = validated_data.pop("engineering_systems_payload", [])
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        cfg = Configuration.objects.create(user=user, **validated_data)
+
+        self._apply_modules(cfg, modules_payload, replace=True)
+        self._apply_engineering(cfg, eng_payload, replace=True)
+
+        cfg.save()  # пересчитает total_price и main_category в модели
+        return cfg
+
+    def update(self, instance, validated_data):
+        modules_payload = validated_data.pop("modules_payload", None)
+        eng_payload = validated_data.pop("engineering_systems_payload", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if modules_payload is not None:
+            self._apply_modules(instance, modules_payload, replace=True)
+
+        if eng_payload is not None:
+            self._apply_engineering(instance, eng_payload, replace=True)
+
+        instance.save()
+        return instance
+
+    def _apply_modules(self, cfg: Configuration, items, replace: bool = True):
+        if replace:
+            cfg.module_items.all().delete()
+
+        if not items:
+            return
+
+        ids = [it["module_id"] for it in items]
+        existing = set(EquipmentModule.objects.filter(id__in=ids).values_list("id", flat=True))
+        missing = [mid for mid in ids if mid not in existing]
+        if missing:
+            raise serializers.ValidationError({"modules_payload": [f"Unknown module_id: {missing}"]})
+
+        for it in items:
+            ConfigurationModule.objects.create(
+                configuration=cfg,
+                module_id=it["module_id"],
+                quantity=it.get("quantity") or 1,
+            )
+
+    def _apply_engineering(self, cfg: Configuration, items, replace: bool = True):
+        if replace:
+            cfg.engineering_items.all().delete()
+
+        if not items:
+            return
+
+        ids = [it["engineering_system_id"] for it in items]
+        existing = set(EngineeringSystemOption.objects.filter(id__in=ids).values_list("id", flat=True))
+        missing = [eid for eid in ids if eid not in existing]
+        if missing:
+            raise serializers.ValidationError({"engineering_systems_payload": [f"Unknown engineering_system_id: {missing}"]})
+
+        for it in items:
+            ConfigurationEngineeringSystem.objects.create(
+                configuration=cfg,
+                engineering_system_id=it["engineering_system_id"],
+                quantity=it.get("quantity") or 1,
+                custom_parameters=it.get("custom_parameters", None),
+                price_at_selection=it.get("price_at_selection", None),
+            )

@@ -11,7 +11,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # .env — только для локалки.
 # В Docker переменные уже прокинуты через compose, override=False их НЕ перетрет.
-load_dotenv(BASE_DIR / ".env", override=False)
+# ✅ Подхватываем .env и из backend/, и из корня проекта (если он лежит на уровень выше)
+load_dotenv(BASE_DIR / ".env", override=False)          # backend/.env
+load_dotenv(BASE_DIR.parent / ".env", override=False)   # project_root/.env
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
 
@@ -137,7 +139,18 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ✅ В dev не используем Manifest storage (иначе падает Browsable API DRF без collectstatic)
+# ✅ В prod оставляем Manifest (это правильно для WhiteNoise)
+STATICFILES_STORAGE = (
+    "django.contrib.staticfiles.storage.StaticFilesStorage"
+    if DEBUG
+    else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+)
+
+# WhiteNoise: удобно для dev (раздавать статику через finders без collectstatic)
+WHITENOISE_USE_FINDERS = DEBUG
+WHITENOISE_AUTOREFRESH = DEBUG
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

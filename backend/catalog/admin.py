@@ -1,5 +1,13 @@
 ﻿from django.contrib import admin
-from .models import EquipmentCategory, EquipmentPhysicalType, EquipmentModule, CompatibilityRule
+
+from .models import (
+    EquipmentCategory,
+    EquipmentPhysicalType,
+    EquipmentModule,
+    CompatibilityRule,
+    EngineeringSystemGroup,
+    EngineeringSystemOption,
+)
 
 
 @admin.register(EquipmentCategory)
@@ -7,7 +15,7 @@ class EquipmentCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'parent', 'equipment_type', 'order', 'is_active', 'module_count']
     list_editable = ['order', 'is_active']
     list_filter = ['equipment_type', 'is_active', 'parent']
-    search_fields = ['name', 'description']
+    search_fields = ['name', 'code', 'description']  # добавил code для удобства поиска/автокомплита
     fields = ['name', 'parent', 'equipment_type', 'code', 'description', 'order', 'is_active']
     readonly_fields = ['code']
 
@@ -49,7 +57,7 @@ class EquipmentModuleAdmin(admin.ModelAdmin):
         'price_type',
         'is_active'
     ]
-    search_fields = ['name', 'description']
+    search_fields = ['name', 'description']  # если есть code у модуля — можно добавить 'code'
     list_editable = ['is_active', 'is_default']
     readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
@@ -92,3 +100,21 @@ class CompatibilityRuleAdmin(admin.ModelAdmin):
     list_filter = ['rule_type', 'is_active']
     filter_horizontal = ['modules']
     list_editable = ['is_active']
+
+
+# ✅ ДОБАВЛЕНО: Инженерные системы (нужно для autocomplete_fields в configurator/admin.py)
+
+@admin.register(EngineeringSystemGroup)
+class EngineeringSystemGroupAdmin(admin.ModelAdmin):
+    list_display = ['code', 'key', 'title', 'selection_mode']
+    list_filter = ['selection_mode']
+    search_fields = ['code', 'key', 'title']
+    ordering = ['code']
+
+
+@admin.register(EngineeringSystemOption)
+class EngineeringSystemOptionAdmin(admin.ModelAdmin):
+    list_display = ['code', 'title', 'group', 'price_type', 'price']
+    list_filter = ['group', 'price_type']
+    search_fields = ['code', 'title']
+    ordering = ['code']

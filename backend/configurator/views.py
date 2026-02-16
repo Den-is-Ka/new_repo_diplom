@@ -1,189 +1,116 @@
-from rest_framework import viewsets, permissions, status
+# backend/configurator/views.py
+from django.db import transaction
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 
-from configurator.models import Configuration
-from configurator.serializers import (
-    ConfigurationSerializer,
-    ConfigurationCreateSerializer,
-    ConfigurationValidateSerializer
-)
-from catalog.models import EquipmentCategory, EquipmentModule
+from orders.services import create_order_from_configuration
+
+from .models import Configuration
+from .serializers import ConfigurationSerializer
+from .services.compatibility import validate_configuration
+
+
+class IsOwnerOrStaff(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj: Configuration):
+        if request.user and request.user.is_staff:
+            return True
+        return request.user.is_authenticated and obj.user_id == request.user.id
 
 
 class ConfigurationViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet для работы с конфигурациями.
-    """
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ConfigurationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrStaff]
 
     def get_queryset(self):
-        """Возвращаем только конфигурации текущего пользователя"""
-        return Configuration.objects.filter(user=self.request.user)
-
-    def get_serializer_class(self):
-        """Выбираем сериализатор в зависимости от действия"""
-        if self.action in ['create', 'update', 'partial_update']:
-            return ConfigurationCreateSerializer
-        return ConfigurationSerializer
+        qs = Configuration.objects.all().order_by("-created_at")
+        if self.request.user.is_staff:
+            return qs
+        return qs.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        """Создание конфигурации с текущим пользователем"""
         serializer.save(user=self.request.user)
 
-    @action(detail=True, methods=['get'])
+    # -------------------------
+    # Helpers
+    # -------------------------
+    def _collect_issues(self, cfg: Configuration) -> list[dict]:
+        issues: list[dict] = []
+
+        if not cfg.sub_category_id:
+            issues.append({"level": "error", "code": "NO_SUBCATEGORY", "message": "Sub category is not selected"})
+
+        if cfg.module_items.count() == 0:
+            issues.append({"level": "warning", "code": "NO_MODULES", "message": "No modules selected"})
+
+        res = validate_configuration(cfg)
+        issues.extend(res.issues)
+        return issues
+
+    def _is_ok(self, issues: list[dict]) -> bool:
+        return not any(i.get("level") == "error" for i in issues)
+
+    # -------------------------
+    # Actions
+    # -------------------------
+    @action(detail=True, methods=["post"])
+    def calculate(self, request, pk=None):
+        cfg = self.get_object()
+        total = cfg.calculate_total_price()
+        if cfg.total_price != total:
+            cfg.total_price = total
+            cfg.save(update_fields=["total_price", "updated_at"])
+        return Response({"id": cfg.id, "total_price": str(cfg.total_price)})
+
+    @action(detail=True, methods=["post"])
     def validate(self, request, pk=None):
-        """Валидация конкретной конфигурации"""
-        configuration = self.get_object()
+        cfg = self.get_object()
+        issues = self._collect_issues(cfg)
+        ok = self._is_ok(issues)
+        return Response({"id": cfg.id, "ok": ok, "issues": issues})
 
-        # TODO: Реализовать метод валидации в модели
-        is_valid = True
-        errors = []
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        """
+        1) Валидируем
+        2) Переводим конфиг в SUBMITTED (генерится cfg.order_number)
+        3) Создаём Order (снимок) идемпотентно: (order, created)
+        """
+        cfg = self.get_object()
 
-        # Временная заглушка для валидации
-        if not configuration.modules.exists():
-            is_valid = False
-            errors.append("Конфигурация должна содержать хотя бы один модуль")
+        issues = self._collect_issues(cfg)
+        if not self._is_ok(issues):
+            return Response(
+                {"id": cfg.id, "ok": False, "issues": issues},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        serializer = ConfigurationValidateSerializer({
-            'is_valid': is_valid,
-            'errors': errors,
-            'total_price': configuration.total_price
-        })
+        with transaction.atomic():
+            # важно: блокируем строку конфига от гонок двух submit
+            cfg = Configuration.objects.select_for_update().get(pk=cfg.pk)
 
-        return Response(serializer.data)
+            # гарантируем SUBMITTED (и генерацию order_number)
+            if cfg.status != Configuration.Status.SUBMITTED:
+                cfg.status = Configuration.Status.SUBMITTED
+                # update_fields тут ок, НО: у тебя order_number генерится внутри save()
+                # поэтому лучше без update_fields, чтобы код генерации отработал гарантированно
+                cfg.save()
+            else:
+                # если уже submitted — всё равно дернем save() (на случай пустого order_number)
+                cfg.save()
 
-    @action(detail=False, methods=['post'])
-    def validate_new(self, request):
-        """Валидация новой конфигурации без сохранения"""
-        serializer = ConfigurationCreateSerializer(
-            data=request.data,
-            context={'request': request}
+            cfg.refresh_from_db(fields=["order_number", "status", "updated_at"])
+
+            order, created = create_order_from_configuration(cfg)
+
+        return Response(
+            {
+                "ok": True,
+                "issues": issues,
+                "configuration_id": cfg.id,
+                "order_id": order.id,
+                "order_number": order.order_number,
+                "already_exists": (not created),
+            },
+            status=(status.HTTP_201_CREATED if created else status.HTTP_200_OK),
         )
-
-        if serializer.is_valid():
-            # Создаем временную конфигурацию для валидации
-            config_data = serializer.validated_data
-            config_data['user'] = request.user
-
-            # Создаем объект без сохранения в БД
-            temp_config = Configuration(**config_data)
-            temp_config.id = None  # Гарантируем, что это новый объект
-
-            # Валидируем (временная заглушка)
-            is_valid = True
-            errors = []
-
-            # Проверка минимальных требований
-            if not config_data.get('modules'):
-                is_valid = False
-                errors.append("Конфигурация должна содержать хотя бы один модуль")
-
-            # Расчет цены
-            total_price = temp_config.calculate_total_price()
-
-            response_serializer = ConfigurationValidateSerializer({
-                'is_valid': is_valid,
-                'errors': errors,
-                'total_price': total_price
-            })
-
-            return Response(response_serializer.data)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['get'])
-    def main_categories(self, request):
-        """Получение списка основных категорий (1.1 и 1.2)"""
-        main_categories = EquipmentCategory.objects.filter(
-            parent__isnull=False,
-            parent__parent__isnull=True
-        ).select_related('parent')
-
-        data = []
-        for category in main_categories:
-            data.append({
-                'id': category.id,
-                'name': category.name,
-                'parent_name': category.parent.name if category.parent else '',
-                'equipment_type': category.equipment_type,
-                'description': category.description
-            })
-        return Response(data)
-
-    @action(detail=False, methods=['get'])
-    def sub_categories(self, request):
-        """Получение подкатегорий для выбранной основной категории"""
-        main_category_id = request.query_params.get('main_category_id')
-
-        if not main_category_id:
-            return Response(
-                {'error': 'main_category_id параметр обязателен'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            main_category = EquipmentCategory.objects.get(id=main_category_id)
-            sub_categories = EquipmentCategory.objects.filter(
-                parent=main_category
-            )
-            data = []
-            for sub in sub_categories:
-                data.append({
-                    'id': sub.id,
-                    'name': sub.name,
-                    'code': sub.code,
-                    'description': sub.description,
-                    'is_active': sub.is_active
-                })
-            return Response(data)
-        except EquipmentCategory.DoesNotExist:
-            return Response(
-                {'error': 'Основная категория не найдена'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-    @action(detail=False, methods=['get'])
-    def available_modules(self, request):
-        """Получение модулей для выбранной категории"""
-        category_id = request.query_params.get('category_id')
-        applicable_to = request.query_params.get('applicable_to')  # DGU или COMPRESSOR
-
-        if not category_id:
-            return Response(
-                {'error': 'category_id параметр обязателен'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            category = EquipmentCategory.objects.get(id=category_id)
-
-            # Получаем модули для этой категории
-            modules = EquipmentModule.objects.filter(
-                category=category,
-                is_active=True
-            )
-
-            # Фильтрация по применимости, если указана
-            if applicable_to:
-                modules = modules.filter(applicable_to__in=[applicable_to, 'BOTH'])
-
-            data = []
-            for module in modules:
-                data.append({
-                    'id': module.id,
-                    'name': module.name,
-                    'description': module.description,
-                    'price': str(module.price) if module.price else None,
-                    'price_type': module.price_type,
-                    'display_price': module.display_price,
-                    'physical_type': module.physical_type.name if module.physical_type else '',
-                    'applicable_to': module.applicable_to
-                })
-            return Response(data)
-        except EquipmentCategory.DoesNotExist:
-            return Response(
-                {'error': 'Категория не найдена'},
-                status=status.HTTP_404_NOT_FOUND
-            )
