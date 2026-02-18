@@ -11,25 +11,34 @@ router.register(r"orders", OrderViewSet, basename="orders")
 
 @api_view(["GET"])
 def api_root(request):
-    return Response({
-        "message": "orders API",
-        "status": "working",
-        "available_endpoints": [
-            "/api/orders/",
-            "/api/orders/test/",
-            "/api/orders/orders/",
-            "/api/orders/orders/{id}/",
-        ]
-    })
+    return Response(
+        {
+            "message": "orders API",
+            "status": "working",
+            "available_endpoints": [
+                "/api/orders/",
+                "/api/orders/test/",
+                "/api/orders/orders/",
+                "/api/orders/orders/{id}/",
+                "/api/orders/orders/my/",
+                "/api/orders/orders/manager/?status=NEW",
+                "/api/orders/orders/{id}/assign_manager/",
+                "/api/orders/orders/{id}/change_status/",
+                "/api/orders/orders/{id}/history/",
+            ],
+        }
+    )
 
 
 @api_view(["GET"])
 def test_endpoint(request):
-    return Response({
-        "status": "success",
-        "app": "orders",
-        "message": "API endpoint is working correctly"
-    })
+    return Response(
+        {
+            "status": "success",
+            "app": "orders",
+            "message": "API endpoint is working correctly",
+        }
+    )
 
 
 urlpatterns = [

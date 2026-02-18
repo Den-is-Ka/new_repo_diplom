@@ -1,14 +1,21 @@
 from django.core.exceptions import FieldDoesNotExist
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from .models import Order
-from .serializers import OrderSerializer
+from .models import Order, OrderStatusHistory
 from .permissions import IsOrderOwnerOrStaff
+from .serializers import (
+    AssignManagerSerializer,
+    ChangeStatusSerializer,
+    OrderSerializer,
+    OrderStatusHistorySerializer,
+)
+from .services import assign_manager, change_status
 
 
 def has_field(model, name: str) -> bool:
-    """Безопасно проверяем, существует ли поле у модели."""
     try:
         model._meta.get_field(name)
         return True
@@ -16,18 +23,15 @@ def has_field(model, name: str) -> bool:
         return False
 
 
-class OrderViewSet(mixins.ListModelMixin,
-                   mixins.RetrieveModelMixin,
-                   viewsets.GenericViewSet):
+class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
-    MVP:
-      - GET /api/orders/orders/        (list)
-      - GET /api/orders/orders/{id}/   (retrieve)
-
-    Права:
-      - staff видит всё
-      - пользователь видит только свои (через Order.user)
-        fallback: через Order.configuration.user (если вдруг Order.user уберёшь)
+    - GET  /api/orders/orders/                 list (staff: all, user: own)
+    - GET  /api/orders/orders/{id}/            retrieve
+    - GET  /api/orders/orders/my/              list only my orders (explicit)
+    - GET  /api/orders/orders/manager/         manager list (staff only) + filter ?status=
+    - POST /api/orders/orders/{id}/assign_manager/
+    - POST /api/orders/orders/{id}/change_status/
+    - GET  /api/orders/orders/{id}/history/    status history
     """
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderOwnerOrStaff]
@@ -36,24 +40,100 @@ class OrderViewSet(mixins.ListModelMixin,
         qs = Order.objects.all().order_by("-id")
         user = self.request.user
 
-        # Staff видит всё
+        # staff видит всё
         if user.is_staff:
             return qs
 
-        # Основной и правильный путь для твоей текущей модели:
-        # Order.user всегда есть -> фильтруем по нему
+        # основной путь: Order.user
         if has_field(Order, "user"):
             return qs.filter(user=user)
 
-        # Fallback (на будущее / если модель поменяется):
-        # Order.configuration -> Configuration.user
+        # fallback: Order.configuration.user
         if has_field(Order, "configuration"):
             cfg_field = Order._meta.get_field("configuration")
             cfg_model = cfg_field.related_model
-
             if has_field(cfg_model, "user"):
                 return qs.filter(**{f"{cfg_field.name}__user": user})
 
-        # Если вообще не можем определить владельца — не показываем ничего
         return qs.none()
 
+    @action(detail=False, methods=["get"], url_path="my")
+    def my(self, request):
+        # строго "только мои" (даже если staff)
+        qs = Order.objects.all().order_by("-id").filter(user=request.user)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="manager")
+    def manager(self, request):
+        # MVP: менеджер = staff
+        if not request.user.is_staff:
+            return Response({"detail": "Only manager/staff can access."}, status=status.HTTP_403_FORBIDDEN)
+
+        qs = Order.objects.all().order_by("-id")
+        st = request.query_params.get("status")
+        if st:
+            qs = qs.filter(status=st)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="assign_manager")
+    def assign_manager_action(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"detail": "Only manager/staff can assign manager."}, status=status.HTTP_403_FORBIDDEN)
+
+        order = self.get_object()
+
+        s = AssignManagerSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        manager_id = s.validated_data["manager_id"]
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            manager_user = User.objects.get(id=manager_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Manager user not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            updated = assign_manager(order_id=order.id, manager_user=manager_user, actor=request.user)
+        except (ValueError, PermissionError) as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(self.get_serializer(updated).data)
+
+    @action(detail=True, methods=["post"], url_path="change_status")
+    def change_status_action(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"detail": "Only manager/staff can change status."}, status=status.HTTP_403_FORBIDDEN)
+
+        order = self.get_object()
+
+        s = ChangeStatusSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        new_status = s.validated_data["status"]
+        comment = s.validated_data.get("comment", "")
+
+        try:
+            updated = change_status(order_id=order.id, actor=request.user, new_status=new_status, comment=comment)
+        except PermissionError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(self.get_serializer(updated).data)
+
+    @action(detail=True, methods=["get"], url_path="history")
+    def history(self, request, pk=None):
+        """
+        История смен статуса.
+        staff видит любую; пользователь — только свою.
+        """
+        order = self.get_object()
+
+        if not request.user.is_staff and getattr(order, "user_id", None) != request.user.id:
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        qs = OrderStatusHistory.objects.filter(order_id=order.id).order_by("created_at")
+        return Response(OrderStatusHistorySerializer(qs, many=True).data)
