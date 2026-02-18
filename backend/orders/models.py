@@ -48,6 +48,10 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     snapshot = models.JSONField(default=dict, blank=True)
 
+    # ✅ ШАГ 2: бизнес-фиксация дат статусов
+    quoted_at = models.DateTimeField(null=True, blank=True)     # когда заказ “согласован/квотирован” (APPROVED)
+    completed_at = models.DateTimeField(null=True, blank=True)  # когда заказ завершён (COMPLETED)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

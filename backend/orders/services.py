@@ -51,7 +51,10 @@ def _generate_order_number() -> str:
 
 def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
     """
-    Минимальный snapshot (достаточно для диплома/проверок).
+    Расширенный snapshot для диплома:
+    - modules
+    - engineering_systems
+    - контакты (company_name/email/phone)
     """
     modules = []
     for item in cfg.module_items.select_related("module").all():
@@ -66,14 +69,76 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
             }
         )
 
+    # --- ✅ ШАГ 3: engineering systems (под твою схему: engineering_system) ---
+    engineering_systems = []
+    engineering_rel = getattr(cfg, "engineering_items", None)
+    if engineering_rel is not None:
+        # В твоей модели связь называется engineering_system (а не option)
+        try:
+            items = engineering_rel.select_related(
+                "engineering_system",
+                "engineering_system__group",  # если group есть у engineering_system
+            ).all()
+        except Exception:
+            # если group нет — или select_related не подходит — просто all()
+            items = engineering_rel.all()
+
+        for item in items:
+            # основное: engineering_system
+            es = getattr(item, "engineering_system", None)
+
+            # группа, если есть
+            group = getattr(es, "group", None) if es is not None else None
+
+            # цена: в конфиге обычно хранится price_at_selection
+            price_at_selection = getattr(item, "price_at_selection", None)
+
+            engineering_systems.append(
+                {
+                    "id": getattr(es, "id", None) if es is not None else getattr(item, "id", None),
+                    "name": getattr(es, "name", None) if es is not None else None,
+                    "group": getattr(group, "name", None) if group is not None else None,
+                    "quantity": getattr(item, "quantity", None),
+                    "price": (
+                        str(price_at_selection)
+                        if price_at_selection is not None
+                        else (
+                            str(getattr(es, "price", None))
+                            if es is not None and getattr(es, "price", None) is not None
+                            else None
+                        )
+                    ),
+                }
+            )
+
+    # --- ✅ ШАГ 3: контакты ---
+    u = getattr(cfg, "user", None)
+
+    # ✅ FIX: приоритет выражений сделан однозначным
+    company_name = getattr(cfg, "company_name", None) or (
+        getattr(u, "company_name", None) if u is not None else None
+    )
+    email = getattr(cfg, "email", None) or (getattr(u, "email", None) if u is not None else None)
+    phone = (
+        getattr(cfg, "phone", None)
+        or (getattr(u, "phone", None) if u is not None else None)
+        or (getattr(u, "phone_number", None) if u is not None else None)
+    )
+
     return {
         "configuration": {
             "id": cfg.id,
             "status": cfg.status,
             "name": cfg.name,
         },
+        "customer": {
+            "company_name": company_name,
+            "email": email,
+            "phone": phone,
+        },
         "total_price": str(cfg.calculate_total_price()),
         "modules": modules,
+        "engineering_systems": engineering_systems,
     }
 
 
@@ -138,6 +203,10 @@ def assign_manager(order_id: int, manager_user: User, actor: User) -> Order:
         .get(id=order_id)
     )
 
+    # ✅ STEP 1: назначать менеджера можно ТОЛЬКО на NEW заказ
+    if order.status != OrderStatus.NEW:
+        raise ValueError("Manager can be assigned only to NEW order")
+
     if order.manager_id and order.manager_id != manager_user.id:
         raise ValueError("Manager is already assigned.")
 
@@ -174,7 +243,19 @@ def change_status(order_id: int, actor: User, new_status: str, comment: str = ""
     _validate_transition(old_status, new_status)
 
     order.status = new_status
-    order.save(update_fields=["status", "updated_at"])
+
+    update_fields = ["status", "updated_at"]
+
+    # ✅ ШАГ 2: бизнес-фиксация дат (не перетираем, если уже стоят)
+    if new_status == OrderStatus.APPROVED and getattr(order, "quoted_at", None) is None:
+        order.quoted_at = timezone.now()
+        update_fields.append("quoted_at")
+
+    if new_status == OrderStatus.COMPLETED and getattr(order, "completed_at", None) is None:
+        order.completed_at = timezone.now()
+        update_fields.append("completed_at")
+
+    order.save(update_fields=update_fields)
 
     OrderStatusHistory.objects.create(
         order=order,

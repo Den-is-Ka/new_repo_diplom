@@ -10,9 +10,14 @@ def test_submit_creates_order(configuration_with_module, customer):
 
     assert created is True
     assert order.configuration_id == configuration_with_module.id
-    assert order.order_number
-    assert order.total_price is not None
-    assert isinstance(order.snapshot, dict)
+    assert order.status == OrderStatus.NEW
+
+    # ✅ STEP 3: расширенный snapshot (ключи должны быть всегда)
+    assert "customer" in order.snapshot
+    assert "engineering_systems" in order.snapshot
+
+    assert set(order.snapshot["customer"].keys()) == {"company_name", "email", "phone"}
+    assert isinstance(order.snapshot["engineering_systems"], list)
 
 
 @pytest.mark.django_db
@@ -77,3 +82,120 @@ def test_history_written_on_status_change(configuration_with_module, customer, m
 
     # У тебя поле называется НЕ actor. Проверим универсально:
     assert getattr(last, "actor", None) == manager or getattr(last, "changed_by", None) == manager or getattr(last, "user", None) == manager
+
+import pytest
+from model_bakery import baker
+
+from orders.models import Order, OrderStatus
+from orders.services import assign_manager
+
+
+@pytest.mark.django_db
+def test_assign_manager_only_for_new_status():
+    actor = baker.make("users.User", is_staff=True)      # кто выполняет действие (менеджер/админ)
+    manager = baker.make("users.User", is_staff=True)    # кого назначаем менеджером
+
+    order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
+
+    with pytest.raises(ValueError, match="only to NEW"):
+        assign_manager(order.id, manager, actor)
+
+import pytest
+from model_bakery import baker
+
+from orders.models import Order, OrderStatus
+from orders.services import change_status
+
+
+@pytest.mark.django_db
+def test_change_status_sets_quoted_at_on_approved():
+    actor = baker.make("users.User", is_staff=True)
+
+    order = baker.make(
+        Order,
+        status=OrderStatus.IN_REVIEW,
+        manager=actor,       # чтобы прошла проверка "assigned manager"
+        quoted_at=None,
+    )
+
+    change_status(order.id, actor, OrderStatus.APPROVED)
+
+    order.refresh_from_db()
+    assert order.quoted_at is not None
+
+
+@pytest.mark.django_db
+def test_change_status_sets_completed_at_on_completed():
+    actor = baker.make("users.User", is_staff=True)
+
+    order = baker.make(
+        Order,
+        status=OrderStatus.IN_PRODUCTION,
+        manager=actor,
+        completed_at=None,
+    )
+
+    change_status(order.id, actor, OrderStatus.COMPLETED)
+
+    order.refresh_from_db()
+    assert order.completed_at is not None
+
+import pytest
+from model_bakery import baker
+
+from orders.models import Order, OrderStatus
+from orders.services import assign_manager
+
+
+@pytest.mark.django_db
+def test_assign_manager_only_new_forbidden_when_not_new(manager):
+    # actor=manager (у тебя это staff)
+    actor = manager
+    manager_user = manager
+
+    order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
+
+    with pytest.raises(ValueError, match="only to NEW"):
+        assign_manager(order.id, manager_user=manager_user, actor=actor)
+
+from django.utils import timezone
+from datetime import timedelta
+
+from orders.services import change_status
+
+
+@pytest.mark.django_db
+def test_change_status_does_not_overwrite_quoted_at(manager):
+    actor = manager
+
+    old_time = timezone.now() - timedelta(days=1)
+
+    order = baker.make(
+        Order,
+        status=OrderStatus.IN_REVIEW,
+        manager=actor,
+        quoted_at=old_time,
+    )
+
+    change_status(order.id, actor, OrderStatus.APPROVED)
+
+    order.refresh_from_db()
+    assert order.quoted_at == old_time
+
+@pytest.mark.django_db
+def test_change_status_does_not_overwrite_completed_at(manager):
+    actor = manager
+
+    old_time = timezone.now() - timedelta(days=1)
+
+    order = baker.make(
+        Order,
+        status=OrderStatus.IN_PRODUCTION,
+        manager=actor,
+        completed_at=old_time,
+    )
+
+    change_status(order.id, actor, OrderStatus.COMPLETED)
+
+    order.refresh_from_db()
+    assert order.completed_at == old_time
