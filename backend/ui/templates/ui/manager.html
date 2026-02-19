@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Diplom UI • Manager</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:1200px;margin:24px auto;padding:0 12px}
+    .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .card{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}
+    button,input,select{padding:10px;border-radius:10px;border:1px solid #ccc}
+    button{cursor:pointer}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+    .muted{color:#666}
+    .ok{color:#0a7}
+    .err{color:#c00}
+    pre{background:#f6f6f6;padding:12px;border-radius:12px;overflow:auto}
+    code{background:#f6f6f6;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1 style="margin:0">🧑‍💼 Manager UI</h1>
+    <button onclick="location.href='/ui/login/'">Back to Login</button>
+    <button onclick="logout()">Logout</button>
+    <span class="muted">Uses: <code>/api/orders/orders/manager/</code>, assign/change_status/history</span>
+  </div>
+
+  <div class="card">
+    <h2>📋 Orders queue</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <label class="muted">status:</label>
+      <select id="statusFilter">
+        <option value="">(all)</option>
+        <option value="NEW">NEW</option>
+        <option value="IN_REVIEW">IN_REVIEW</option>
+        <option value="APPROVED">APPROVED</option>
+        <option value="REJECTED">REJECTED</option>
+        <option value="IN_PRODUCTION">IN_PRODUCTION</option>
+        <option value="COMPLETED">COMPLETED</option>
+      </select>
+      <button onclick="loadManagerOrders()">Refresh</button>
+    </div>
+    <p id="mgrMsg" class="muted"></p>
+    <div id="mgrTable"></div>
+  </div>
+
+  <div class="card">
+    <h2>🧾 Order actions</h2>
+    <p class="muted">Открой заказ из таблицы — появятся действия.</p>
+
+    <div id="actions" style="display:none">
+      <p><b>Selected order:</b> <span id="selOrder"></span></p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="managerId" placeholder="manager_id (например, твой user id)">
+        <button onclick="assignManager()">Assign manager</button>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <select id="newStatus">
+          <option value="NEW">NEW</option>
+          <option value="IN_REVIEW">IN_REVIEW</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="IN_PRODUCTION">IN_PRODUCTION</option>
+          <option value="COMPLETED">COMPLETED</option>
+        </select>
+        <input id="comment" placeholder="comment (optional)">
+        <button onclick="changeStatus()">Change status</button>
+        <button onclick="loadHistory()">Load history</button>
+      </div>
+    </div>
+
+    <pre id="details">{}</pre>
+  </div>
+
+<script>
+const API = {
+  managerOrders: (status) => {
+    const base = "/api/orders/orders/manager/";
+    if (!status) return base;
+    return base + `?status=${encodeURIComponent(status)}`;
+  },
+  assign: (id) => `/api/orders/orders/${id}/assign_manager/`,
+  change: (id) => `/api/orders/orders/${id}/change_status/`,
+  history: (id) => `/api/orders/orders/${id}/history/`,
+};
+
+let selectedOrderId = null;
+
+function accessToken(){
+  return localStorage.getItem("access");
+}
+
+function authHeaders(){
+  const t = accessToken();
+  if (!t) throw new Error("Нет access token. Сначала зайди на /ui/login/");
+  return { "Authorization": "Bearer " + t };
+}
+
+function setMsg(id, text, cls="muted"){
+  const el = document.getElementById(id);
+  el.className = cls;
+  el.textContent = text;
+}
+
+function logout(){
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  location.href="/ui/login/";
+}
+
+async function apiFetch(url, options={}){
+  const headers = options.headers || {};
+  const merged = { ...headers, ...authHeaders() };
+  return fetch(url, { ...options, headers: merged });
+}
+
+function showDetails(obj){
+  document.getElementById("details").textContent = JSON.stringify(obj, null, 2);
+}
+
+async function loadManagerOrders(){
+  setMsg("mgrMsg", "Loading...");
+  const st = document.getElementById("statusFilter").value;
+  try{
+    const r = await apiFetch(API.managerOrders(st));
+    const data = await r.json();
+    if (!r.ok){
+      setMsg("mgrMsg", "Ошибка: " + JSON.stringify(data), "err");
+      return;
+    }
+    renderOrders(data);
+    setMsg("mgrMsg", "OK", "ok");
+  }catch(e){
+    setMsg("mgrMsg", String(e), "err");
+  }
+}
+
+function renderOrders(items){
+  if (!Array.isArray(items) || items.length === 0){
+    document.getElementById("mgrTable").innerHTML = "<p class='muted'>Нет заказов.</p>";
+    return;
+  }
+
+  const rows = items.map(o => {
+    const id = o.id ?? "";
+    const num = o.order_number ?? "";
+    const st = o.status ?? "";
+    const total = o.total_price ?? "";
+    const manager = o.manager ?? o.manager_id ?? "";
+    return `
+      <tr>
+        <td>${id}</td>
+        <td>${num}</td>
+        <td>${st}</td>
+        <td>${total}</td>
+        <td>${manager || "-"}</td>
+        <td><button data-id="${id}">Open</button></td>
+      </tr>
+    `;
+  }).join("");
+
+  document.getElementById("mgrTable").innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Number</th><th>Status</th><th>Total</th><th>Manager</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  document.querySelectorAll("#mgrTable button[data-id]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedOrderId = btn.getAttribute("data-id");
+      document.getElementById("actions").style.display = "block";
+      document.getElementById("selOrder").textContent = selectedOrderId;
+      showDetails({ selected_order_id: selectedOrderId });
+    });
+  });
+}
+
+async function assignManager(){
+  if (!selectedOrderId) return alert("Сначала выбери заказ");
+  const managerId = document.getElementById("managerId").value.trim();
+  if (!managerId) return alert("Введи manager_id");
+
+  try{
+    const r = await apiFetch(API.assign(selectedOrderId), {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ manager_id: Number(managerId) })
+    });
+    const data = await r.json();
+    if (!r.ok) return alert("Assign error: " + JSON.stringify(data));
+    showDetails({ type:"assign_result", data });
+    await loadManagerOrders();
+  }catch(e){
+    alert(e);
+  }
+}
+
+async function changeStatus(){
+  if (!selectedOrderId) return alert("Сначала выбери заказ");
+  const newStatus = document.getElementById("newStatus").value;
+  const comment = document.getElementById("comment").value;
+
+  try{
+    const r = await apiFetch(API.change(selectedOrderId), {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ status: newStatus, comment })
+    });
+    const data = await r.json();
+    if (!r.ok) return alert("Change status error: " + JSON.stringify(data));
+    showDetails({ type:"change_status_result", data });
+    await loadManagerOrders();
+  }catch(e){
+    alert(e);
+  }
+}
+
+async function loadHistory(){
+  if (!selectedOrderId) return alert("Сначала выбери заказ");
+  try{
+    const r = await apiFetch(API.history(selectedOrderId));
+    const data = await r.json();
+    if (!r.ok) return alert("History error: " + JSON.stringify(data));
+    showDetails({ type:"history", data });
+  }catch(e){
+    alert(e);
+  }
+}
+
+loadManagerOrders();
+</script>
+</body>
+</html>

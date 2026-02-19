@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Diplom UI • Login</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:900px;margin:24px auto;padding:0 12px}
+    .card{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}
+    input,button,select{padding:10px;border-radius:10px;border:1px solid #ccc}
+    button{cursor:pointer}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row>*{flex:1}
+    .muted{color:#666}
+    .ok{color:#0a7}
+    .err{color:#c00}
+    code{background:#f6f6f6;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <h1>🚀 Diplom UI</h1>
+  <p class="muted">JWT login → Customer / Manager demo</p>
+
+  <div class="card">
+    <h2>🔑 Login</h2>
+    <div class="row">
+      <input id="username" placeholder="username" autocomplete="username">
+      <input id="password" placeholder="password" type="password" autocomplete="current-password">
+      <button id="btnLogin">Login (JWT)</button>
+    </div>
+    <p id="msg" class="muted"></p>
+    <p class="muted">
+      Endpoints: <code>/api/token/</code>, дальше Bearer token в запросах.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>➡️ Demo pages</h2>
+    <div class="row">
+      <button id="goCustomer">Open Customer UI</button>
+      <button id="goManager">Open Manager UI</button>
+      <button id="btnLogout">Logout (clear token)</button>
+    </div>
+    <p class="muted">Если ты не staff — Manager UI будет отдавать 403 на manager endpoints.</p>
+  </div>
+
+<script>
+const API = {
+  token: "/api/token/",
+};
+
+function setMsg(text, cls="muted"){
+  const el = document.getElementById("msg");
+  el.className = cls;
+  el.textContent = text;
+}
+
+function setTokens(access, refresh){
+  localStorage.setItem("access", access);
+  if (refresh) localStorage.setItem("refresh", refresh);
+}
+
+document.getElementById("btnLogin").addEventListener("click", async () => {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  if (!username || !password) return setMsg("Введите username и password", "err");
+
+  setMsg("Logging in...");
+  try{
+    const r = await fetch(API.token, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await r.json();
+    if (!r.ok) return setMsg("Ошибка login: " + (data.detail || JSON.stringify(data)), "err");
+
+    setTokens(data.access, data.refresh);
+    setMsg("OK: JWT получен и сохранён в localStorage", "ok");
+  }catch(e){
+    setMsg("Network error: " + e, "err");
+  }
+});
+
+document.getElementById("goCustomer").addEventListener("click", () => location.href="/ui/customer/");
+document.getElementById("goManager").addEventListener("click", () => location.href="/ui/manager/");
+document.getElementById("btnLogout").addEventListener("click", () => {
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  setMsg("Tokens cleared.", "ok");
+});
+</script>
+</body>
+</html>

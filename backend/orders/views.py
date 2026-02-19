@@ -1,4 +1,4 @@
-from django.core.exceptions import FieldDoesNotExist
+from django.contrib.auth import get_user_model
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -13,14 +13,6 @@ from .serializers import (
     OrderStatusHistorySerializer,
 )
 from .services import assign_manager, change_status
-
-
-def has_field(model, name: str) -> bool:
-    try:
-        model._meta.get_field(name)
-        return True
-    except FieldDoesNotExist:
-        return False
 
 
 class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -39,30 +31,15 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
     def get_queryset(self):
         qs = Order.objects.all().order_by("-id")
         user = self.request.user
-
-        # staff видит всё
         if user.is_staff:
             return qs
-
-        # основной путь: Order.user
-        if has_field(Order, "user"):
-            return qs.filter(user=user)
-
-        # fallback: Order.configuration.user
-        if has_field(Order, "configuration"):
-            cfg_field = Order._meta.get_field("configuration")
-            cfg_model = cfg_field.related_model
-            if has_field(cfg_model, "user"):
-                return qs.filter(**{f"{cfg_field.name}__user": user})
-
-        return qs.none()
+        return qs.filter(user=user)
 
     @action(detail=False, methods=["get"], url_path="my")
     def my(self, request):
-        # строго "только мои" (даже если staff)
+        # строго "только мои" — даже если staff
         qs = Order.objects.all().order_by("-id").filter(user=request.user)
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
+        return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=False, methods=["get"], url_path="manager")
     def manager(self, request):
@@ -75,8 +52,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         if st:
             qs = qs.filter(status=st)
 
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
+        return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"], url_path="assign_manager")
     def assign_manager_action(self, request, pk=None):
@@ -89,7 +65,6 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         s.is_valid(raise_exception=True)
         manager_id = s.validated_data["manager_id"]
 
-        from django.contrib.auth import get_user_model
         User = get_user_model()
         try:
             manager_user = User.objects.get(id=manager_id)
@@ -126,14 +101,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
 
     @action(detail=True, methods=["get"], url_path="history")
     def history(self, request, pk=None):
-        """
-        История смен статуса.
-        staff видит любую; пользователь — только свою.
-        """
+        # доступ контролируется IsOrderOwnerOrStaff через self.get_object()
         order = self.get_object()
-
-        if not request.user.is_staff and getattr(order, "user_id", None) != request.user.id:
-            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
-
         qs = OrderStatusHistory.objects.filter(order_id=order.id).order_by("created_at")
         return Response(OrderStatusHistorySerializer(qs, many=True).data)

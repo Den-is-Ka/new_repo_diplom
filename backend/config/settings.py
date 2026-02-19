@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "configurator",
     "orders",
     "notifications",
+    "ui",
 ]
 
 AUTH_USER_MODEL = "users.User"

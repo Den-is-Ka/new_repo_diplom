@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Diplom UI • Customer</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:1100px;margin:24px auto;padding:0 12px}
+    .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .card{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}
+    button,input,select{padding:10px;border-radius:10px;border:1px solid #ccc}
+    button{cursor:pointer}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+    .muted{color:#666}
+    .ok{color:#0a7}
+    .err{color:#c00}
+    pre{background:#f6f6f6;padding:12px;border-radius:12px;overflow:auto}
+    code{background:#f6f6f6;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1 style="margin:0">👤 Customer UI</h1>
+    <button onclick="location.href='/ui/login/'">Back to Login</button>
+    <button onclick="logout()">Logout</button>
+    <span class="muted">Uses: <code>/api/configurator/configurations/</code>, <code>.../{id}/submit/</code>, <code>/api/orders/orders/my/</code></span>
+  </div>
+
+  <div class="card">
+    <h2>⚙️ Configurations</h2>
+    <button onclick="loadConfigurations()">Refresh configurations</button>
+    <p id="cfgMsg" class="muted"></p>
+    <div id="cfgTable"></div>
+  </div>
+
+  <div class="card">
+    <h2>📦 My orders</h2>
+    <button onclick="loadMyOrders()">Refresh my orders</button>
+    <p id="ordMsg" class="muted"></p>
+    <div id="ordTable"></div>
+  </div>
+
+  <div class="card">
+    <h2>🧊 Snapshot / Details</h2>
+    <p class="muted">Выбери конфигурацию или заказ — детали появятся тут.</p>
+    <pre id="details">{}</pre>
+  </div>
+
+<script>
+const API = {
+  cfgList: "/api/configurator/configurations/",
+  cfgDetail: (id) => `/api/configurator/configurations/${id}/`,
+  cfgSubmit: (id) => `/api/configurator/configurations/${id}/submit/`,
+  myOrders: "/api/orders/orders/my/",
+};
+
+function accessToken(){
+  return localStorage.getItem("access");
+}
+
+function authHeaders(){
+  const t = accessToken();
+  if (!t) throw new Error("Нет access token. Сначала зайди на /ui/login/");
+  return { "Authorization": "Bearer " + t };
+}
+
+function setMsg(id, text, cls="muted"){
+  const el = document.getElementById(id);
+  el.className = cls;
+  el.textContent = text;
+}
+
+function logout(){
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  location.href="/ui/login/";
+}
+
+async function apiFetch(url, options={}){
+  const headers = options.headers || {};
+  const merged = { ...headers, ...authHeaders() };
+  return fetch(url, { ...options, headers: merged });
+}
+
+function showDetails(obj){
+  document.getElementById("details").textContent = JSON.stringify(obj, null, 2);
+}
+
+async function loadConfigurations(){
+  setMsg("cfgMsg", "Loading...");
+  try{
+    const r = await apiFetch(API.cfgList);
+    const data = await r.json();
+    if (!r.ok) return setMsg("cfgMsg", "Ошибка: " + JSON.stringify(data), "err");
+
+    renderConfigurations(data);
+    setMsg("cfgMsg", "OK", "ok");
+  }catch(e){
+    setMsg("cfgMsg", String(e), "err");
+  }
+}
+
+function renderConfigurations(items){
+  const host = document.getElementById("cfgTable");
+
+  if (!Array.isArray(items) || items.length === 0){
+    host.innerHTML = "<p class='muted'>Нет конфигураций.</p>";
+    return;
+  }
+
+  const rows = items.map(c => {
+    const id = c.id ?? c.pk ?? "";
+    const status = c.status ?? "";
+    const total = c.total_price ?? c.totalPrice ?? "";
+    const submittedAt = c.submitted_at ?? "";
+    const orderNumber = c.order_number ?? "";
+    return `
+      <tr>
+        <td>${id}</td>
+        <td>${status}</td>
+        <td>${total}</td>
+        <td>${submittedAt || "-"}</td>
+        <td>${orderNumber || "-"}</td>
+        <td>
+          <button onclick="openCfg(${id})">Open</button>
+          <button onclick="submitCfg(${id})">Submit → Order</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  host.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Status</th><th>Total</th><th>submitted_at</th><th>order_number</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+async function openCfg(id){
+  try{
+    const r = await apiFetch(API.cfgDetail(id));
+    const data = await r.json();
+    if (!r.ok) return alert("Ошибка: " + JSON.stringify(data));
+    showDetails({ type:"configuration", data });
+  }catch(e){
+    alert(e);
+  }
+}
+
+async function submitCfg(id){
+  if (!confirm(`Submit configuration #${id} ?`)) return;
+  setMsg("cfgMsg", `Submitting #${id}...`);
+  try{
+    const r = await apiFetch(API.cfgSubmit(id), { method:"POST" });
+    const data = await r.json();
+    if (!r.ok) {
+      setMsg("cfgMsg", "Submit error: " + JSON.stringify(data), "err");
+      return;
+    }
+    showDetails({ type:"submit_response", data });
+    setMsg("cfgMsg", `Submit OK (created=${data.created}) order=${data.order_number}`, "ok");
+    await loadConfigurations();
+    await loadMyOrders();
+  }catch(e){
+    setMsg("cfgMsg", String(e), "err");
+  }
+}
+
+async function loadMyOrders(){
+  setMsg("ordMsg", "Loading...");
+  try{
+    const r = await apiFetch(API.myOrders);
+    const data = await r.json();
+    if (!r.ok) return setMsg("ordMsg", "Ошибка: " + JSON.stringify(data), "err");
+
+    renderOrders(data);
+    setMsg("ordMsg", "OK", "ok");
+  }catch(e){
+    setMsg("ordMsg", String(e), "err");
+  }
+}
+
+function renderOrders(items){
+  const host = document.getElementById("ordTable");
+
+  if (!Array.isArray(items) || items.length === 0){
+    host.innerHTML = "<p class='muted'>Нет заказов.</p>";
+    return;
+  }
+
+  host.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Number</th><th>Status</th><th>Total</th><th></th></tr>
+      </thead>
+      <tbody>
+        ${items.map((o, idx) => `
+          <tr>
+            <td>${o.id ?? ""}</td>
+            <td>${o.order_number ?? ""}</td>
+            <td>${o.status ?? ""}</td>
+            <td>${o.total_price ?? ""}</td>
+            <td><button class="qv" data-idx="${idx}">Quick view</button></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+
+  host.querySelectorAll("button.qv").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-idx"));
+      const order = items[idx];
+      showDetails({ type: "order", data: order });
+    });
+  });
+}
+
+// авто-загрузка
+loadConfigurations();
+loadMyOrders();
+</script>
+</body>
+</html>
