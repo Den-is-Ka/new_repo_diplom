@@ -24,3 +24,4 @@ staticfiles/
 # docker volumes (если вдруг где-то лежит)
 diplom_pgdata/
 tools/
+
