@@ -9,3 +9,4 @@ python-dotenv==1.0.0
 requests==2.31.0
 Pillow==11.1.0
 whitenoise==6.6.0
+model-bakery==1.20.5

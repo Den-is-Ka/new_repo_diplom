@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class OrderStatus(models.TextChoices):
@@ -9,6 +12,20 @@ class OrderStatus(models.TextChoices):
     REJECTED = "REJECTED", "Rejected"
     IN_PRODUCTION = "IN_PRODUCTION", "In production"
     COMPLETED = "COMPLETED", "Completed"
+
+
+# ✅ Строгий жизненный цикл (разрешенные переходы)
+ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
+    OrderStatus.NEW: {OrderStatus.IN_REVIEW},
+    OrderStatus.IN_REVIEW: {OrderStatus.APPROVED, OrderStatus.REJECTED},
+    OrderStatus.APPROVED: {OrderStatus.IN_PRODUCTION},
+    OrderStatus.IN_PRODUCTION: {OrderStatus.COMPLETED},
+    OrderStatus.REJECTED: set(),   # терминальный
+    OrderStatus.COMPLETED: set(),  # терминальный
+}
+
+
+TERMINAL_STATUSES: set[str] = {OrderStatus.REJECTED, OrderStatus.COMPLETED}
 
 
 class Order(models.Model):
@@ -43,13 +60,14 @@ class Order(models.Model):
         max_length=16,
         choices=OrderStatus.choices,
         default=OrderStatus.NEW,
+        db_index=True,
     )
 
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     snapshot = models.JSONField(default=dict, blank=True)
 
-    # ✅ ШАГ 2: бизнес-фиксация дат статусов
-    quoted_at = models.DateTimeField(null=True, blank=True)     # когда заказ “согласован/квотирован” (APPROVED)
+    # бизнес-фиксация дат статусов
+    quoted_at = models.DateTimeField(null=True, blank=True)     # когда заказ согласован (APPROVED)
     completed_at = models.DateTimeField(null=True, blank=True)  # когда заказ завершён (COMPLETED)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -63,7 +81,7 @@ class Order(models.Model):
             models.Index(fields=["user", "status"]),
         ]
         constraints = [
-            # Явно фиксируем уникальность для configuration (кроме NULL)
+            # Уникальность для configuration (кроме NULL)
             models.UniqueConstraint(
                 fields=["configuration"],
                 condition=models.Q(configuration__isnull=False),
@@ -71,8 +89,38 @@ class Order(models.Model):
             ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.order_number} ({self.status})"
+
+    # --------- lifecycle helpers ---------
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in TERMINAL_STATUSES
+
+    def can_transition_to(self, new_status: str) -> bool:
+        if new_status not in OrderStatus.values:
+            return False
+        return new_status in ALLOWED_STATUS_TRANSITIONS.get(self.status, set())
+
+    def transition_to(self, new_status: str) -> None:
+        """
+        Меняет статус + выставляет бизнес-даты.
+        Историю (OrderStatusHistory) логируем в сервисе/вьюхе — чтобы туда передать changed_by/comment.
+        """
+        if self.status == new_status:
+            return
+        if not self.can_transition_to(new_status):
+            raise ValueError(f"Invalid status transition: {self.status} -> {new_status}")
+
+        # проставляем даты при достижении ключевых статусов
+        now = timezone.now()
+        if new_status == OrderStatus.APPROVED and self.quoted_at is None:
+            self.quoted_at = now
+        if new_status == OrderStatus.COMPLETED and self.completed_at is None:
+            self.completed_at = now
+
+        self.status = new_status
 
 
 class OrderStatusHistory(models.Model):
@@ -104,5 +152,5 @@ class OrderStatusHistory(models.Model):
             models.Index(fields=["created_at"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Order {self.order_id}: {self.from_status} -> {self.to_status}"
