@@ -1,0 +1,88 @@
+{% extends "ui/base.html" %}
+{% block title %}Заказ #{{ order_id }} • Diplom UI{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1>Заказ #{{ order_id }}</h1>
+  <p class="muted">
+    API: <code>GET /api/orders/orders/{{ order_id }}/</code>,
+    <code>GET /api/orders/orders/{{ order_id }}/history/</code>,
+    <code>POST /api/orders/orders/{{ order_id }}/change_status/</code>
+  </p>
+
+  <div class="row">
+    <button class="secondary" id="btn-reload">Обновить</button>
+
+    <label class="field inline">
+      <span>New status</span>
+      <select id="new-status">
+        <option>IN_REVIEW</option>
+        <option>APPROVED</option>
+        <option>IN_PRODUCTION</option>
+        <option>COMPLETED</option>
+        <option>REJECTED</option>
+      </select>
+    </label>
+    <button id="btn-change">Сменить статус</button>
+  </div>
+
+  <div id="detail-alert" class="alert hidden"></div>
+
+  <div class="grid-2">
+    <div>
+      <h3>Детали</h3>
+      <pre id="detail" class="code"></pre>
+    </div>
+    <div>
+      <h3>History</h3>
+      <pre id="history" class="code"></pre>
+    </div>
+  </div>
+
+  <h3>Snapshot</h3>
+  <pre id="snapshot" class="code"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const ORDER_ID = {{ order_id|safe }};
+  const $ = (id) => document.getElementById(id);
+
+  function show(type, text) {
+    const el = $("detail-alert");
+    el.className = "alert " + (type || "");
+    el.textContent = text || "";
+    el.classList.toggle("hidden", !text);
+  }
+
+  async function reload() {
+    show("", "");
+    const order = await DiplomAPI.getOrder(ORDER_ID);
+    const history = await DiplomAPI.getOrderHistory(ORDER_ID);
+
+    $("detail").textContent = JSON.stringify(order, null, 2);
+    $("history").textContent = JSON.stringify(history, null, 2);
+
+    const snap = order.snapshot || order.order_snapshot || order.items_snapshot || null;
+    $("snapshot").textContent = JSON.stringify(snap, null, 2);
+
+    show("success", "Загружено.");
+  }
+
+  async function changeStatus() {
+    const status = $("new-status").value;
+    const res = await DiplomAPI.changeOrderStatus(ORDER_ID, status);
+    $("detail").textContent = JSON.stringify(res, null, 2);
+    show("success", "Статус обновлён. Обновляю детали...");
+    await reload();
+  }
+
+  $("btn-reload").addEventListener("click", () => reload().catch(e => show("danger", String(e?.message||e))));
+  $("btn-change").addEventListener("click", () => changeStatus().catch(e => show("danger", String(e?.message||e))));
+
+  reload().catch(() => show("danger", "Не удалось загрузить. Проверь права/логин."));
+})();
+</script>
+{% endblock %}

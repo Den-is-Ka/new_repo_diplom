@@ -1,0 +1,42 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{% block title %}Diplom UI{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'ui/app.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">D</div>
+      <div>
+        <div class="brand-title">Diplom UI</div>
+        <div class="brand-sub">Конфигуратор контейнерных решений</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/ui/login/" class="nav-link">Логин</a>
+      <a href="/ui/customer/" class="nav-link">Конфигуратор</a>
+      <a href="/ui/orders/" class="nav-link">Заказы</a>
+      <a href="/ui/logout/" class="nav-link">Выход</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div id="global-alert" class="alert hidden"></div>
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    window.DIPLOM = window.DIPLOM || {};
+    // Если у тебя API не на том же домене/порту — можно поменять:
+    window.DIPLOM.API_BASE = "";
+  </script>
+  <script src="{% static 'ui/app.js' %}"></script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

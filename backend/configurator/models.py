@@ -89,7 +89,6 @@ class Configuration(models.Model):
         blank=True,
     )
 
-    # ✅ добавили: фиксация времени submit (нужно для диплома + snapshot)
     submitted_at = models.DateTimeField(
         _("Дата отправки"),
         null=True,
@@ -111,9 +110,9 @@ class Configuration(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_status_display()})"
 
-    # ✅ единая проверка “конфиг залочен”
+    # ✅ единая проверка “конфиг залочен”: редактировать можно только DRAFT
     def is_locked(self) -> bool:
-        return self.status == self.Status.SUBMITTED
+        return self.status != self.Status.DRAFT
 
     def calculate_total_price(self) -> Decimal:
         """Расчет общей стоимости (фиксированные цены)"""
@@ -139,40 +138,22 @@ class Configuration(models.Model):
 
         return total
 
-    def _validate_locked_update(self):
+    def _validate_locked_update(self, old_status: str | None):
         """
-        Запрещаем менять бизнес-поля конфигурации после SUBMITTED.
-        Разрешаем только служебные изменения:
-          - status (для будущего workflow)
+        Запрещаем менять бизнес-поля конфигурации, если она НЕ в DRAFT.
+
+        Разрешаем служебные изменения:
+          - status (workflow)
           - order_number (генерация номера)
-          - total_price (если где-то сервисно пересчитается)
+          - total_price (пересчет)
           - submitted_at (фиксируем при submit)
           - updated_at (служебное)
         """
         if not self.pk:
             return
 
-        old = (
-            Configuration.objects.filter(pk=self.pk)
-            .only(
-                "status",
-                "name",
-                "description",
-                "container_config",
-                "main_category_id",
-                "sub_category_id",
-                "user_id",
-                "company_name",
-                "phone",
-                "email",
-            )
-            .first()
-        )
-        if not old:
-            return
-
-        # если раньше было SUBMITTED и статус не меняется — значит это попытка редактирования
-        if old.status == self.Status.SUBMITTED and self.status == old.status:
+        # если ранее уже было НЕ DRAFT — конфиг залочен
+        if old_status and old_status != self.Status.DRAFT:
             protected_fields = [
                 "name",
                 "description",
@@ -185,6 +166,14 @@ class Configuration(models.Model):
                 "email",
             ]
 
+            old = (
+                Configuration.objects.filter(pk=self.pk)
+                .only(*protected_fields, "status")
+                .first()
+            )
+            if not old:
+                return
+
             changed = []
             for f in protected_fields:
                 if getattr(old, f) != getattr(self, f):
@@ -196,43 +185,46 @@ class Configuration(models.Model):
                 )
 
     def save(self, *args, **kwargs):
-        # 0) запрет редактирования после submit (на уровне модели)
-        self._validate_locked_update()
+        # 0) определяем старый статус (для lock + фиксации submit transition)
+        old_status = None
+        if self.pk:
+            old_status = Configuration.objects.filter(pk=self.pk).values_list("status", flat=True).first()
 
-        # Автоматически выставляем main_category на основе sub_category
+        # 1) запрет редактирования бизнес-полей, если раньше был НЕ DRAFT
+        self._validate_locked_update(old_status)
+
+        # 2) Автоматически выставляем main_category на основе sub_category
         if self.sub_category and not self.main_category:
             current = self.sub_category
             while current.parent and current.parent.parent:
                 current = current.parent
             self.main_category = current
 
-        is_new = self.pk is None
-
-        # 1) сначала сохраняем объект, чтобы появился pk
+        # 3) сохраняем объект, чтобы появился pk / обновились поля
         super().save(*args, **kwargs)
 
-        # 2) пересчет total_price (но после SUBMITTED по идее не должен меняться,
-        #    т.к. вложенные таблицы мы тоже залочим ниже)
+        # 4) пересчет total_price
+        # (после submit через таблицы-сквозняки менять нельзя, так что цена фактически стабильна)
         new_total = self.calculate_total_price()
         if self.total_price != new_total:
             self.total_price = new_total
             super().save(update_fields=["total_price", "updated_at"])
 
-        # 3) при переводе в SUBMITTED — фиксируем время отправки + номер заказа
-        if self.status == self.Status.SUBMITTED:
-            # submitted_at ставим один раз
+        # 5) при ПЕРЕХОДЕ в SUBMITTED — фиксируем submitted_at и order_number
+        transitioned_to_submitted = (old_status != self.Status.SUBMITTED) and (self.status == self.Status.SUBMITTED)
+        if transitioned_to_submitted:
             if self.submitted_at is None:
                 self.submitted_at = timezone.now()
                 super().save(update_fields=["submitted_at", "updated_at"])
 
-            # Генерация номера заказа (один раз)
             if not self.order_number:
                 date_str = timezone.now().strftime("%Y%m%d")
+                # считаем уже существующие SUBMITTED за сегодня (текущая запись уже SUBMITTED, поэтому +1 ок)
                 count = Configuration.objects.filter(
                     status=self.Status.SUBMITTED,
                     created_at__date=timezone.now().date(),
                 ).count()
-                self.order_number = f"ORD-{date_str}-{count + 1:04d}"
+                self.order_number = f"ORD-{date_str}-{count:04d}"
                 super().save(update_fields=["order_number", "updated_at"])
 
 
@@ -264,13 +256,13 @@ class ConfigurationModule(models.Model):
     def save(self, *args, **kwargs):
         if self.configuration_id:
             cfg = Configuration.objects.only("status").get(pk=self.configuration_id)
-            if cfg.status == Configuration.Status.SUBMITTED:
+            if cfg.is_locked():
                 raise ValidationError(_("Configuration is locked after submit."))
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         cfg = Configuration.objects.only("status").get(pk=self.configuration_id)
-        if cfg.status == Configuration.Status.SUBMITTED:
+        if cfg.is_locked():
             raise ValidationError(_("Configuration is locked after submit."))
         return super().delete(*args, **kwargs)
 
@@ -325,23 +317,19 @@ class ConfigurationEngineeringSystem(models.Model):
         return f"{self.engineering_system} x{self.quantity}"
 
     def save(self, *args, **kwargs):
-        # lock после submit
         if self.configuration_id:
             cfg = Configuration.objects.only("status").get(pk=self.configuration_id)
-            if cfg.status == Configuration.Status.SUBMITTED:
+            if cfg.is_locked():
                 raise ValidationError(_("Configuration is locked after submit."))
 
         # фикс “цена на момент выбора”: не сохраняем None для fixed
-        if (
-            self.price_at_selection is None
-            and self.engineering_system.price_type == "fixed"
-        ):
+        if self.price_at_selection is None and self.engineering_system.price_type == "fixed":
             self.price_at_selection = self.engineering_system.price or Decimal("0.00")
 
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         cfg = Configuration.objects.only("status").get(pk=self.configuration_id)
-        if cfg.status == Configuration.Status.SUBMITTED:
+        if cfg.is_locked():
             raise ValidationError(_("Configuration is locked after submit."))
         return super().delete(*args, **kwargs)

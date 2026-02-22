@@ -3,12 +3,15 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 
+from drf_spectacular.utils import extend_schema  # ✅ добавили
+
 from .views import OrderViewSet
 
 router = DefaultRouter()
 router.register(r"orders", OrderViewSet, basename="orders")
 
 
+@extend_schema(exclude=True)  # ✅ исключаем из OpenAPI, чтобы не было warning
 @api_view(["GET"])
 def api_root(request):
     return Response(
@@ -19,6 +22,7 @@ def api_root(request):
                 "/api/orders/",
                 "/api/orders/test/",
                 "/api/orders/orders/",
+                "/api/orders/orders/?status=NEW",
                 "/api/orders/orders/{id}/",
                 "/api/orders/orders/my/",
                 "/api/orders/orders/manager/?status=NEW",
@@ -30,6 +34,7 @@ def api_root(request):
     )
 
 
+@extend_schema(exclude=True)  # ✅ исключаем из OpenAPI, чтобы не было warning
 @api_view(["GET"])
 def test_endpoint(request):
     return Response(

@@ -4,6 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from users.roles import is_manufacturer
+
 from .models import Order, OrderStatusHistory
 from .permissions import IsOrderOwnerOrStaff
 from .serializers import (
@@ -17,37 +19,70 @@ from .services import assign_manager, change_status
 
 class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
-    - GET  /api/orders/orders/                 list (staff: all, user: own)
+    - GET  /api/orders/orders/                 list (staff: all, manufacturer: all, user: own) + ?status=
     - GET  /api/orders/orders/{id}/            retrieve
-    - GET  /api/orders/orders/my/              list only my orders (explicit)
-    - GET  /api/orders/orders/manager/         manager list (staff only) + filter ?status=
-    - POST /api/orders/orders/{id}/assign_manager/
-    - POST /api/orders/orders/{id}/change_status/
-    - GET  /api/orders/orders/{id}/history/    status history
+    - GET  /api/orders/orders/my/              list only my orders (explicit) + ?status=
+    - GET  /api/orders/orders/manager/         manager list (staff only) + ?status=
+    - POST /api/orders/orders/{id}/assign_manager/   (staff only)
+    - POST /api/orders/orders/{id}/change_status/    (staff or manufacturer)
+    - GET  /api/orders/orders/{id}/history/          status history
     """
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderOwnerOrStaff]
 
     def get_queryset(self):
-        qs = Order.objects.all().order_by("-id")
+        # ✅ фикс для drf-spectacular (генерация схемы)
+        if getattr(self, "swagger_fake_view", False):
+            return Order.objects.none()
+
+        qs = (
+            Order.objects.all()
+            .select_related("user", "manager", "configuration")
+            .order_by("-id")
+        )
         user = self.request.user
-        if user.is_staff:
-            return qs
-        return qs.filter(user=user)
+
+        if not (user.is_staff or is_manufacturer(user)):
+            qs = qs.filter(user=user)
+
+        st = self.request.query_params.get("status")
+        if st:
+            qs = qs.filter(status=st)
+
+        return qs
 
     @action(detail=False, methods=["get"], url_path="my")
     def my(self, request):
-        # строго "только мои" — даже если staff
-        qs = Order.objects.all().order_by("-id").filter(user=request.user)
+        """
+        Всегда строго "только мои", даже если staff/manufacturer (удобно для UI).
+        """
+        qs = (
+            Order.objects.all()
+            .select_related("user", "manager", "configuration")
+            .order_by("-id")
+            .filter(user=request.user)
+        )
+
+        st = request.query_params.get("status")
+        if st:
+            qs = qs.filter(status=st)
+
         return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=False, methods=["get"], url_path="manager")
     def manager(self, request):
-        # MVP: менеджер = staff
+        """
+        Менеджерский эндпоинт (MVP: manager = staff).
+        """
         if not request.user.is_staff:
             return Response({"detail": "Only manager/staff can access."}, status=status.HTTP_403_FORBIDDEN)
 
-        qs = Order.objects.all().order_by("-id")
+        qs = (
+            Order.objects.all()
+            .select_related("user", "manager", "configuration")
+            .order_by("-id")
+        )
+
         st = request.query_params.get("status")
         if st:
             qs = qs.filter(status=st)
@@ -56,6 +91,9 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
 
     @action(detail=True, methods=["post"], url_path="assign_manager")
     def assign_manager_action(self, request, pk=None):
+        """
+        Назначение менеджера — только staff.
+        """
         if not request.user.is_staff:
             return Response({"detail": "Only manager/staff can assign manager."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -80,8 +118,14 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
 
     @action(detail=True, methods=["post"], url_path="change_status")
     def change_status_action(self, request, pk=None):
-        if not request.user.is_staff:
-            return Response({"detail": "Only manager/staff can change status."}, status=status.HTTP_403_FORBIDDEN)
+        """
+        Смена статуса — staff или manufacturer.
+        """
+        if not (request.user.is_staff or is_manufacturer(request.user)):
+            return Response(
+                {"detail": "Only manager/staff or manufacturer can change status."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         order = self.get_object()
 
@@ -101,7 +145,15 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
 
     @action(detail=True, methods=["get"], url_path="history")
     def history(self, request, pk=None):
-        # доступ контролируется IsOrderOwnerOrStaff через self.get_object()
+        """
+        История статусов.
+        Показываем в порядке возрастания времени (как хронология).
+        """
         order = self.get_object()
-        qs = OrderStatusHistory.objects.filter(order_id=order.id).order_by("created_at")
+        qs = (
+            OrderStatusHistory.objects
+            .filter(order_id=order.id)
+            .select_related("changed_by")
+            .order_by("created_at")
+        )
         return Response(OrderStatusHistorySerializer(qs, many=True).data)

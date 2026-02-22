@@ -1,8 +1,17 @@
 import pytest
+from datetime import timedelta
 
-from orders.models import OrderStatus
+from django.utils import timezone
+from model_bakery import baker
+from rest_framework.exceptions import ValidationError
+
+from orders.models import Order, OrderStatus
 from orders.services import submit_configuration, assign_manager, change_status
 
+
+# =========================
+# submit workflow
+# =========================
 
 @pytest.mark.django_db
 def test_submit_creates_order(configuration_with_module, customer):
@@ -12,10 +21,9 @@ def test_submit_creates_order(configuration_with_module, customer):
     assert order.configuration_id == configuration_with_module.id
     assert order.status == OrderStatus.NEW
 
-    # ✅ STEP 3: расширенный snapshot (ключи должны быть всегда)
+    # расширенный snapshot (ключи должны быть всегда)
     assert "customer" in order.snapshot
     assert "engineering_systems" in order.snapshot
-
     assert set(order.snapshot["customer"].keys()) == {"company_name", "email", "phone"}
     assert isinstance(order.snapshot["engineering_systems"], list)
 
@@ -32,10 +40,18 @@ def test_submit_is_idempotent(configuration_with_module, customer):
 
 @pytest.mark.django_db
 def test_submit_rejects_empty_configuration(configuration, customer):
-    with pytest.raises(ValueError):
+    # ✅ раньше было ValueError, теперь бизнес-валидация кидает DRF ValidationError
+    with pytest.raises(ValidationError) as e:
         submit_configuration(configuration.id, customer)
 
+    payload = e.value.detail
+    assert str(payload["code"]) == "CONFIG_INVALID"
+    assert any(str(d["code"]) == "EMPTY_CONFIGURATION" for d in payload["details"])
 
+
+# =========================
+# assign manager
+# =========================
 
 @pytest.mark.django_db
 def test_assign_manager_sets_manager_and_repeat_is_safe(configuration_with_module, customer, manager):
@@ -55,6 +71,32 @@ def test_assign_manager_sets_manager_and_repeat_is_safe(configuration_with_modul
         pass
 
 
+@pytest.mark.django_db
+def test_assign_manager_only_for_new_status():
+    actor = baker.make("users.User", is_staff=True)      # кто выполняет действие (менеджер/админ)
+    manager_user = baker.make("users.User", is_staff=True)    # кого назначаем менеджером
+
+    order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
+
+    # у тебя сообщение: "Manager can be assigned only to NEW order"
+    with pytest.raises(ValueError, match="only to NEW"):
+        assign_manager(order.id, manager_user, actor)
+
+
+@pytest.mark.django_db
+def test_assign_manager_only_new_forbidden_when_not_new(manager):
+    actor = manager
+    manager_user = manager
+
+    order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
+
+    with pytest.raises(ValueError, match="only to NEW"):
+        assign_manager(order.id, manager_user=manager_user, actor=actor)
+
+
+# =========================
+# change status
+# =========================
 
 @pytest.mark.django_db
 def test_change_status_rejects_illegal_transition(configuration_with_module, customer, manager):
@@ -80,31 +122,12 @@ def test_history_written_on_status_change(configuration_with_module, customer, m
     last = history_qs.last()
     assert last.to_status == OrderStatus.APPROVED
 
-    # У тебя поле называется НЕ actor. Проверим универсально:
-    assert getattr(last, "actor", None) == manager or getattr(last, "changed_by", None) == manager or getattr(last, "user", None) == manager
-
-import pytest
-from model_bakery import baker
-
-from orders.models import Order, OrderStatus
-from orders.services import assign_manager
-
-
-@pytest.mark.django_db
-def test_assign_manager_only_for_new_status():
-    actor = baker.make("users.User", is_staff=True)      # кто выполняет действие (менеджер/админ)
-    manager = baker.make("users.User", is_staff=True)    # кого назначаем менеджером
-
-    order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
-
-    with pytest.raises(ValueError, match="only to NEW"):
-        assign_manager(order.id, manager, actor)
-
-import pytest
-from model_bakery import baker
-
-from orders.models import Order, OrderStatus
-from orders.services import change_status
+    # поле может называться по-разному
+    assert (
+        getattr(last, "actor", None) == manager
+        or getattr(last, "changed_by", None) == manager
+        or getattr(last, "user", None) == manager
+    )
 
 
 @pytest.mark.django_db
@@ -140,34 +163,10 @@ def test_change_status_sets_completed_at_on_completed():
     order.refresh_from_db()
     assert order.completed_at is not None
 
-import pytest
-from model_bakery import baker
-
-from orders.models import Order, OrderStatus
-from orders.services import assign_manager
-
-
-@pytest.mark.django_db
-def test_assign_manager_only_new_forbidden_when_not_new(manager):
-    # actor=manager (у тебя это staff)
-    actor = manager
-    manager_user = manager
-
-    order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
-
-    with pytest.raises(ValueError, match="only to NEW"):
-        assign_manager(order.id, manager_user=manager_user, actor=actor)
-
-from django.utils import timezone
-from datetime import timedelta
-
-from orders.services import change_status
-
 
 @pytest.mark.django_db
 def test_change_status_does_not_overwrite_quoted_at(manager):
     actor = manager
-
     old_time = timezone.now() - timedelta(days=1)
 
     order = baker.make(
@@ -182,10 +181,10 @@ def test_change_status_does_not_overwrite_quoted_at(manager):
     order.refresh_from_db()
     assert order.quoted_at == old_time
 
+
 @pytest.mark.django_db
 def test_change_status_does_not_overwrite_completed_at(manager):
     actor = manager
-
     old_time = timezone.now() - timedelta(days=1)
 
     order = baker.make(

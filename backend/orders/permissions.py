@@ -1,26 +1,21 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-
-from rest_framework.permissions import BasePermission
+from users.roles import is_manufacturer
 
 
 class IsOrderOwnerOrStaff(BasePermission):
     """
-    Staff: доступ ко всем заказам.
-    Owner: только к своим заказам (Order.user).
+    День 1 (P0):
+    - Staff (manager/admin) видит и читает все.
+    - Manufacturer (группа manufacturer) видит и читает все.
+    - Клиент видит/читает только свои заказы.
     """
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated)
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if not user or not user.is_authenticated:
-            return False
-        if user.is_staff:
+        if user.is_staff or is_manufacturer(user):
             return True
         return getattr(obj, "user_id", None) == user.id
-
-class IsOrderOwnerOrStaff(BasePermission):
-    def has_object_permission(self, request, view, obj):
-        user = request.user
-        if not user or not user.is_authenticated:
-            return False
-        return user.is_staff or obj.user_id == user.id

@@ -1,14 +1,19 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
-from configurator.models import Configuration
+from users.roles import is_admin, is_manufacturer  # ✅ добавили роли
+
+from configurator.models import Configuration, ConfigurationEngineeringSystem
 from configurator.serializers import (
     ConfigurationSerializer,
     ConfigurationCreateSerializer,
     ConfigurationValidateSerializer,
+    ConfigurationSetEngineeringSerializer,
 )
-from catalog.models import EquipmentCategory, EquipmentModule
+from configurator.services import validate_configuration_for_submit
+from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
 
 from orders.services import submit_configuration
 
@@ -16,13 +21,21 @@ from orders.services import submit_configuration
 class ConfigurationViewSet(viewsets.ModelViewSet):
     """
     ViewSet для работы с конфигурациями.
+
+    День 1 (P0): Права и фильтрация
+    - admin: видит все конфигурации
+    - manufacturer: конфигурации не видит
+    - client: видит только свои
     """
     queryset = Configuration.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Возвращаем только конфигурации текущего пользователя"""
-        return Configuration.objects.filter(user=self.request.user)
+        """Возвращаем только конфигурации текущего пользователя (надёжно по user_id)."""
+        user_id = getattr(getattr(self.request, "user", None), "id", None)
+        if not user_id:
+            return Configuration.objects.none()
+        return Configuration.objects.filter(user_id=user_id)
 
     def get_serializer_class(self):
         """Выбираем сериализатор в зависимости от действия"""
@@ -36,29 +49,38 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def validate(self, request, pk=None):
-        """Валидация конкретной конфигурации (пока простая заглушка)"""
+        """
+        Реальная валидация сохранённой конфигурации:
+        - те же правила, что и у submit
+        - возвращает is_valid/errors/total_price
+        """
         configuration = self.get_object()
 
         is_valid = True
         errors = []
 
-        # Временная заглушка (позже заменишь на rule-engine)
-        if not configuration.modules.exists():
+        try:
+            validate_configuration_for_submit(configuration)
+        except ValidationError as e:
             is_valid = False
-            errors.append("Конфигурация должна содержать хотя бы один модуль")
+            payload = e.detail
+            details = payload.get("details", [])
+            errors = [str(d.get("message")) for d in details]
 
         serializer = ConfigurationValidateSerializer(
             {
                 "is_valid": is_valid,
                 "errors": errors,
-                "total_price": configuration.total_price,
+                "total_price": configuration.calculate_total_price(),
             }
         )
         return Response(serializer.data)
 
     @action(detail=False, methods=["post"])
     def validate_new(self, request):
-        """Валидация новой конфигурации без сохранения"""
+        """
+        Реальная валидация новой конфигурации без сохранения.
+        """
         serializer = ConfigurationCreateSerializer(
             data=request.data, context={"request": request}
         )
@@ -69,16 +91,19 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         config_data = serializer.validated_data
         config_data["user"] = request.user
 
-        # Создаем объект без сохранения в БД
         temp_config = Configuration(**config_data)
         temp_config.id = None
 
         is_valid = True
         errors = []
 
-        if not config_data.get("modules"):
+        try:
+            validate_configuration_for_submit(temp_config)
+        except ValidationError as e:
             is_valid = False
-            errors.append("Конфигурация должна содержать хотя бы один модуль")
+            payload = e.detail
+            details = payload.get("details", [])
+            errors = [str(d.get("message")) for d in details]
 
         total_price = temp_config.calculate_total_price()
 
@@ -192,6 +217,56 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         return Response(data)
 
     @action(detail=True, methods=["post"])
+    def set_engineering(self, request, pk=None):
+        """
+        Установить (replace) инженерные системы для конфигурации.
+        Body: {"engineering_option_ids":[31,34,39]}
+        """
+        configuration = self.get_object()
+
+        # Жёстко: только для черновика (по ТЗ/lifecycle)
+        if configuration.status != Configuration.Status.DRAFT:
+            return Response(
+                {"detail": "Engineering systems can be changed only in DRAFT status."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ser = ConfigurationSetEngineeringSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ids = ser.validated_data["engineering_option_ids"]
+
+        # replace: удаляем старые
+        ConfigurationEngineeringSystem.objects.filter(configuration=configuration).delete()
+
+        # добавляем новые
+        opts = EngineeringSystemOption.objects.filter(id__in=ids, is_active=True).select_related("group")
+        by_id = {o.id: o for o in opts}
+
+        for oid in ids:
+            opt = by_id.get(oid)
+            if not opt:
+                continue
+            ConfigurationEngineeringSystem.objects.create(
+                configuration=configuration,
+                engineering_system=opt,
+                quantity=1,
+                price_at_selection=opt.price if opt.price_type == "fixed" else None,
+            )
+
+        # обновим цену
+        configuration.total_price = configuration.calculate_total_price()
+        configuration.save(update_fields=["total_price", "updated_at"])
+
+        return Response(
+            {
+                "configuration_id": configuration.id,
+                "engineering_option_ids": ids,
+                "total_price": str(configuration.total_price),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         """
         Отправка конфигурации производителю:
@@ -201,7 +276,6 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         """
         configuration = self.get_object()
 
-        # ✅ OneToOne: если заказ уже есть — возвращаем его
         existing_order = getattr(configuration, "order", None)
         if existing_order is not None:
             return Response(
@@ -230,5 +304,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
             )
+
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

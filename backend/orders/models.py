@@ -24,7 +24,6 @@ ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
     OrderStatus.COMPLETED: set(),  # терминальный
 }
 
-
 TERMINAL_STATUSES: set[str] = {OrderStatus.REJECTED, OrderStatus.COMPLETED}
 
 
@@ -82,6 +81,7 @@ class Order(models.Model):
         ]
         constraints = [
             # Уникальность для configuration (кроме NULL)
+            # (у OneToOne и так unique, но этот constraint не ломает и защищает поведение явно)
             models.UniqueConstraint(
                 fields=["configuration"],
                 condition=models.Q(configuration__isnull=False),
@@ -99,6 +99,7 @@ class Order(models.Model):
         return self.status in TERMINAL_STATUSES
 
     def can_transition_to(self, new_status: str) -> bool:
+        # защита от мусорных статусов
         if new_status not in OrderStatus.values:
             return False
         return new_status in ALLOWED_STATUS_TRANSITIONS.get(self.status, set())
@@ -106,14 +107,15 @@ class Order(models.Model):
     def transition_to(self, new_status: str) -> None:
         """
         Меняет статус + выставляет бизнес-даты.
-        Историю (OrderStatusHistory) логируем в сервисе/вьюхе — чтобы туда передать changed_by/comment.
+        Историю (OrderStatusHistory) логируем в сервисе/вьюхе —
+        чтобы туда передать changed_by/comment.
         """
         if self.status == new_status:
             return
+
         if not self.can_transition_to(new_status):
             raise ValueError(f"Invalid status transition: {self.status} -> {new_status}")
 
-        # проставляем даты при достижении ключевых статусов
         now = timezone.now()
         if new_status == OrderStatus.APPROVED and self.quoted_at is None:
             self.quoted_at = now

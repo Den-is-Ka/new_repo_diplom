@@ -32,6 +32,9 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
+# 🔧 удобно для UI/демо (если где-то забудешь слэш)
+APPEND_SLASH = True
+
 # -------------------------
 # Apps
 # -------------------------
@@ -141,7 +144,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 # ✅ Django 5.x+: вместо STATICFILES_STORAGE используем STORAGES
-# Оставляем WhiteNoise CompressedManifestStaticFilesStorage (как у тебя было)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -175,6 +177,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "EXCEPTION_HANDLER": "config.api_exceptions.custom_exception_handler",
 }
 
 # -------------------------
@@ -190,3 +193,48 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+CONFIG_REQUIRED_MODULE_CODES = []
+CONFIG_REQUIRED_CATEGORY_CODES = []
+
+# -------------------------
+# OpenAPI / Swagger (drf-spectacular)
+# -------------------------
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Diplom • Container Configurator API",
+    "DESCRIPTION": (
+        "Backend для конфигуратора контейнерных решений.\n\n"
+        "Ключевые сценарии:\n"
+        "- Конфигурирование (категории/модули/инженерка, расчёт цены)\n"
+        "- Submit конфигурации → создание Order со snapshot и фиксацией цены\n"
+        "- Жизненный цикл заказа (NEW → IN_REVIEW → APPROVED → IN_PRODUCTION → COMPLETED / REJECTED)\n"
+        "- Роли: client / admin (staff) / manufacturer (group)\n"
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "TAGS": [
+        {"name": "auth", "description": "JWT авторизация"},
+        {"name": "catalog", "description": "Каталог: категории, модули, инженерные опции"},
+        {"name": "configurator", "description": "Конфигурации: create/update/validate/set_engineering/submit"},
+        {"name": "orders", "description": "Заказы: list/retrieve/history/status lifecycle"},
+        {"name": "ui", "description": "HTML/UI endpoints (если используются)"},
+    ],
+}
+
+# -------------------------
+# Email (для защиты: выводим письма в консоль)
+# -------------------------
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@diplom.local")
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+
+# префикс темы — удобно на защите и в логах
+EMAIL_SUBJECT_PREFIX = os.getenv("EMAIL_SUBJECT_PREFIX", "[Diplom] ")
+
+# кому слать уведомление производителю (можно поменять через .env)
+MANUFACTURER_NOTIFY_EMAIL = os.getenv("MANUFACTURER_NOTIFY_EMAIL", "manufacturer@diplom.local")
+
+# 🔧 полезно на будущее, если включишь реальный SMTP (чтобы не зависало)
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))

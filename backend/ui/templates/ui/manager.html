@@ -10,6 +10,7 @@
     .card{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}
     button,input,select{padding:10px;border-radius:10px;border:1px solid #ccc}
     button{cursor:pointer}
+    button[disabled]{opacity:.5;cursor:not-allowed}
     table{width:100%;border-collapse:collapse}
     th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
     .muted{color:#666}
@@ -17,6 +18,14 @@
     .err{color:#c00}
     pre{background:#f6f6f6;padding:12px;border-radius:12px;overflow:auto}
     code{background:#f6f6f6;padding:2px 6px;border-radius:6px}
+
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid #ddd;background:#fafafa}
+    .b-new{border-color:#bbb}
+    .b-inreview{border-color:#09c}
+    .b-approved{border-color:#0a7}
+    .b-rejected{border-color:#c00}
+    .b-prod{border-color:#f90}
+    .b-done{border-color:#0a7}
   </style>
 </head>
 <body>
@@ -55,7 +64,7 @@
 
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <input id="managerId" placeholder="manager_id (например, твой user id)">
-        <button onclick="assignManager()">Assign manager</button>
+        <button id="btnAssign" onclick="assignManager()">Assign manager</button>
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
@@ -68,8 +77,8 @@
           <option value="COMPLETED">COMPLETED</option>
         </select>
         <input id="comment" placeholder="comment (optional)">
-        <button onclick="changeStatus()">Change status</button>
-        <button onclick="loadHistory()">Load history</button>
+        <button id="btnChange" onclick="changeStatus()">Change status</button>
+        <button id="btnHistory" onclick="loadHistory()">Load history</button>
       </div>
     </div>
 
@@ -112,36 +121,94 @@ function logout(){
   location.href="/ui/login/";
 }
 
-async function apiFetch(url, options={}){
-  const headers = options.headers || {};
-  const merged = { ...headers, ...authHeaders() };
-  return fetch(url, { ...options, headers: merged });
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
 function showDetails(obj){
   document.getElementById("details").textContent = JSON.stringify(obj, null, 2);
 }
 
+function statusBadge(status){
+  const s = String(status || "");
+  const label = s || "-";
+  let cls = "badge";
+  if (s === "NEW") cls += " b-new";
+  else if (s === "IN_REVIEW") cls += " b-inreview";
+  else if (s === "APPROVED") cls += " b-approved";
+  else if (s === "REJECTED") cls += " b-rejected";
+  else if (s === "IN_PRODUCTION") cls += " b-prod";
+  else if (s === "COMPLETED") cls += " b-done";
+  return `<span class="${cls}">${escapeHtml(label)}</span>`;
+}
+
+/** ✅ DRF pagination helper */
+function asList(payload){
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.results)) return payload.results;
+  return [];
+}
+function getCount(payload, fallback){
+  if (Array.isArray(payload)) return payload.length;
+  if (payload && typeof payload.count === "number") return payload.count;
+  return fallback;
+}
+
+/** ✅ apiFetch with auto-logout on 401 */
+async function apiFetch(url, options={}){
+  const headers = options.headers || {};
+  const merged = { ...headers, ...authHeaders() };
+  const res = await fetch(url, { ...options, headers: merged });
+
+  if (res.status === 401){
+    alert("Сессия истекла. Нужно войти заново.");
+    logout();
+    throw new Error("Unauthorized (401)");
+  }
+  return res;
+}
+
+function setActionsEnabled(enabled){
+  const btnAssign = document.getElementById("btnAssign");
+  const btnChange = document.getElementById("btnChange");
+  const btnHistory = document.getElementById("btnHistory");
+  if (btnAssign) btnAssign.disabled = !enabled;
+  if (btnChange) btnChange.disabled = !enabled;
+  if (btnHistory) btnHistory.disabled = !enabled;
+}
+
 async function loadManagerOrders(){
   setMsg("mgrMsg", "Loading...");
   const st = document.getElementById("statusFilter").value;
+
   try{
     const r = await apiFetch(API.managerOrders(st));
     const data = await r.json();
+
     if (!r.ok){
       setMsg("mgrMsg", "Ошибка: " + JSON.stringify(data), "err");
       return;
     }
-    renderOrders(data);
-    setMsg("mgrMsg", "OK", "ok");
+
+    const items = asList(data);
+    renderOrders(items);
+
+    setMsg("mgrMsg", `OK (orders: ${getCount(data, items.length)})`, "ok");
   }catch(e){
     setMsg("mgrMsg", String(e), "err");
   }
 }
 
 function renderOrders(items){
+  const host = document.getElementById("mgrTable");
+
   if (!Array.isArray(items) || items.length === 0){
-    document.getElementById("mgrTable").innerHTML = "<p class='muted'>Нет заказов.</p>";
+    host.innerHTML = "<p class='muted'>Нет заказов.</p>";
     return;
   }
 
@@ -151,37 +218,48 @@ function renderOrders(items){
     const st = o.status ?? "";
     const total = o.total_price ?? "";
     const manager = o.manager ?? o.manager_id ?? "";
+
     return `
       <tr>
-        <td>${id}</td>
-        <td>${num}</td>
-        <td>${st}</td>
-        <td>${total}</td>
-        <td>${manager || "-"}</td>
-        <td><button data-id="${id}">Open</button></td>
+        <td>${escapeHtml(id)}</td>
+        <td>${escapeHtml(num)}</td>
+        <td>${statusBadge(st)}</td>
+        <td>${escapeHtml(total)}</td>
+        <td>${escapeHtml(manager || "-")}</td>
+        <td><button class="openBtn" data-id="${escapeHtml(id)}">Open</button></td>
       </tr>
     `;
   }).join("");
 
-  document.getElementById("mgrTable").innerHTML = `
+  host.innerHTML = `
     <table>
       <thead><tr><th>ID</th><th>Number</th><th>Status</th><th>Total</th><th>Manager</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 
-  document.querySelectorAll("#mgrTable button[data-id]").forEach(btn => {
+  host.querySelectorAll("button.openBtn[data-id]").forEach(btn => {
     btn.addEventListener("click", () => {
       selectedOrderId = btn.getAttribute("data-id");
       document.getElementById("actions").style.display = "block";
       document.getElementById("selOrder").textContent = selectedOrderId;
-      showDetails({ selected_order_id: selectedOrderId });
+      setActionsEnabled(true);
+
+      // ✅ показываем сразу весь объект из таблицы (для быстрого демо)
+      const order = items.find(x => String(x.id) === String(selectedOrderId));
+      showDetails({ type:"order", data: order || { selected_order_id: selectedOrderId } });
     });
   });
+
+  // если ничего не выбрано — кнопки не активны
+  if (!selectedOrderId){
+    setActionsEnabled(false);
+  }
 }
 
 async function assignManager(){
   if (!selectedOrderId) return alert("Сначала выбери заказ");
+
   const managerId = document.getElementById("managerId").value.trim();
   if (!managerId) return alert("Введи manager_id");
 
@@ -193,6 +271,7 @@ async function assignManager(){
     });
     const data = await r.json();
     if (!r.ok) return alert("Assign error: " + JSON.stringify(data));
+
     showDetails({ type:"assign_result", data });
     await loadManagerOrders();
   }catch(e){
@@ -202,6 +281,7 @@ async function assignManager(){
 
 async function changeStatus(){
   if (!selectedOrderId) return alert("Сначала выбери заказ");
+
   const newStatus = document.getElementById("newStatus").value;
   const comment = document.getElementById("comment").value;
 
@@ -213,6 +293,7 @@ async function changeStatus(){
     });
     const data = await r.json();
     if (!r.ok) return alert("Change status error: " + JSON.stringify(data));
+
     showDetails({ type:"change_status_result", data });
     await loadManagerOrders();
   }catch(e){
@@ -222,10 +303,12 @@ async function changeStatus(){
 
 async function loadHistory(){
   if (!selectedOrderId) return alert("Сначала выбери заказ");
+
   try{
     const r = await apiFetch(API.history(selectedOrderId));
     const data = await r.json();
     if (!r.ok) return alert("History error: " + JSON.stringify(data));
+
     showDetails({ type:"history", data });
   }catch(e){
     alert(e);

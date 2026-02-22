@@ -7,20 +7,13 @@ from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
+from users.roles import is_manufacturer
+
 from configurator.models import Configuration
+from configurator.services import validate_configuration_for_submit
 from orders.models import Order, OrderStatus, OrderStatusHistory
 
 User = get_user_model()
-
-# Разрешённые переходы статусов (матрица)
-ALLOWED_TRANSITIONS = {
-    OrderStatus.NEW: {OrderStatus.IN_REVIEW},
-    OrderStatus.IN_REVIEW: {OrderStatus.APPROVED, OrderStatus.REJECTED},
-    OrderStatus.APPROVED: {OrderStatus.IN_PRODUCTION},
-    OrderStatus.REJECTED: set(),
-    OrderStatus.IN_PRODUCTION: {OrderStatus.COMPLETED},
-    OrderStatus.COMPLETED: set(),
-}
 
 
 def _is_manager(user: User) -> bool:
@@ -37,10 +30,13 @@ def _require_manager(user: User) -> None:
         raise PermissionError("Only manager can perform this action.")
 
 
-def _validate_transition(from_status: str, to_status: str) -> None:
-    allowed = ALLOWED_TRANSITIONS.get(from_status, set())
-    if to_status not in allowed:
-        raise ValueError(f"Transition {from_status} -> {to_status} is not allowed.")
+def _can_change_order_status(actor: User) -> bool:
+    """
+    День 2: менять статус могут:
+    - staff/superuser (manager)
+    - manufacturer (группа manufacturer)
+    """
+    return bool(actor and actor.is_authenticated and (_is_manager(actor) or is_manufacturer(actor)))
 
 
 def _generate_order_number() -> str:
@@ -51,11 +47,14 @@ def _generate_order_number() -> str:
 
 def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
     """
-    Расширенный snapshot для диплома:
-    - modules
-    - engineering_systems
-    - контакты (company_name/email/phone)
+    Snapshot для диплома:
+    - modules (id, name, price, quantity, price_type)
+    - engineering_systems (id, title, group title, price, quantity)
+    - контакты
+    - total_price
     """
+
+    # ---------- modules ----------
     modules = []
     for item in cfg.module_items.select_related("module").all():
         m = item.module
@@ -69,60 +68,46 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
             }
         )
 
-    # --- ✅ ШАГ 3: engineering systems (под твою схему: engineering_system) ---
+    # ---------- engineering systems ----------
     engineering_systems = []
     engineering_rel = getattr(cfg, "engineering_items", None)
+
     if engineering_rel is not None:
-        # В твоей модели связь называется engineering_system (а не option)
-        try:
-            items = engineering_rel.select_related(
-                "engineering_system",
-                "engineering_system__group",  # если group есть у engineering_system
-            ).all()
-        except Exception:
-            # если group нет — или select_related не подходит — просто all()
-            items = engineering_rel.all()
+        items = engineering_rel.select_related("engineering_system", "engineering_system__group").all()
 
         for item in items:
-            # основное: engineering_system
-            es = getattr(item, "engineering_system", None)
+            es = item.engineering_system  # EngineeringSystemOption
+            es_title = getattr(es, "title", None) or getattr(es, "name", None)
 
-            # группа, если есть
-            group = getattr(es, "group", None) if es is not None else None
+            group_obj = getattr(es, "group", None)
+            group_title = None
+            if group_obj is not None:
+                group_title = getattr(group_obj, "title", None) or getattr(group_obj, "name", None)
 
-            # цена: в конфиге обычно хранится price_at_selection
             price_at_selection = getattr(item, "price_at_selection", None)
+            if price_at_selection is None:
+                price_at_selection = getattr(es, "price", None)
 
             engineering_systems.append(
                 {
-                    "id": getattr(es, "id", None) if es is not None else getattr(item, "id", None),
-                    "name": getattr(es, "name", None) if es is not None else None,
-                    "group": getattr(group, "name", None) if group is not None else None,
-                    "quantity": getattr(item, "quantity", None),
-                    "price": (
-                        str(price_at_selection)
-                        if price_at_selection is not None
-                        else (
-                            str(getattr(es, "price", None))
-                            if es is not None and getattr(es, "price", None) is not None
-                            else None
-                        )
-                    ),
+                    "id": es.id,
+                    "code": getattr(es, "code", None),
+                    "title": es_title,
+                    "group": group_title,
+                    "price": str(price_at_selection) if price_at_selection is not None else None,
+                    "quantity": getattr(item, "quantity", 1),
                 }
             )
 
-    # --- ✅ ШАГ 3: контакты ---
+    # ---------- contacts ----------
     u = getattr(cfg, "user", None)
 
-    # ✅ FIX: приоритет выражений сделан однозначным
-    company_name = getattr(cfg, "company_name", None) or (
-        getattr(u, "company_name", None) if u is not None else None
-    )
-    email = getattr(cfg, "email", None) or (getattr(u, "email", None) if u is not None else None)
+    company_name = getattr(cfg, "company_name", None) or (getattr(u, "company_name", None) if u else None)
+    email = getattr(cfg, "email", None) or (getattr(u, "email", None) if u else None)
     phone = (
         getattr(cfg, "phone", None)
-        or (getattr(u, "phone", None) if u is not None else None)
-        or (getattr(u, "phone_number", None) if u is not None else None)
+        or (getattr(u, "phone", None) if u else None)
+        or (getattr(u, "phone_number", None) if u else None)
     )
 
     return {
@@ -145,29 +130,31 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
 @transaction.atomic
 def submit_configuration(configuration_id: int, user: User) -> Tuple[Order, bool]:
     """
-    Идемпотентный submit:
-      - select_for_update на Configuration
-      - если Order уже есть -> created=False
-      - фиксируем cfg.status=submitted ДО snapshot
-      - создаём Order
+    Submit строго по ТЗ:
+      - конфигурация только владельца
+      - submit только из DRAFT
+      - 1 конфиг -> 1 order (идемпотентно)
+      - status=submitted фиксируется через cfg.save()
+      - после создания заказа отправляем уведомления (клиенту + производителю)
     """
-    cfg = Configuration.objects.select_for_update().get(id=configuration_id)
+    cfg = (
+        Configuration.objects
+        .select_for_update()
+        .select_related("user")
+        .get(id=configuration_id, user=user)
+    )
 
-    # идемпотентность: 1 конфиг -> 1 order
     existing = getattr(cfg, "order", None)
     if existing:
         return existing, False
 
-    # запрет пустой конфигурации
-    if not cfg.module_items.exists() and not cfg.engineering_items.exists():
-        raise ValueError("Configuration is empty. Add modules or engineering systems before submit.")
+    if cfg.status != cfg.Status.DRAFT:
+        raise ValueError("Configuration can be submitted only from DRAFT status.")
 
-    # статус ДО snapshot
-    if cfg.status != cfg.Status.SUBMITTED:
-        cfg.status = cfg.Status.SUBMITTED
-        if getattr(cfg, "submitted_at", None) is None:
-            cfg.submitted_at = timezone.now()
-        cfg.save(update_fields=["status", "submitted_at", "updated_at"])
+    validate_configuration_for_submit(cfg)
+
+    cfg.status = cfg.Status.SUBMITTED
+    cfg.save()
 
     snapshot = _build_snapshot_min(cfg)
     snapshot["submitted_by"] = getattr(user, "id", None)
@@ -176,13 +163,27 @@ def submit_configuration(configuration_id: int, user: User) -> Tuple[Order, bool
     total_price = cfg.calculate_total_price()
 
     order = Order.objects.create(
-        user=cfg.user if getattr(cfg, "user_id", None) else user,
+        user=cfg.user,
         configuration=cfg,
         order_number=_generate_order_number(),
         status=OrderStatus.NEW,
         total_price=total_price,
         snapshot=snapshot,
     )
+
+    # ✅ отправка писем строго после коммита транзакции
+    def _send_emails_after_commit(order_id: int) -> None:
+        from notifications.email_service import send_order_created_emails
+
+        try:
+            fresh = Order.objects.select_related("user").get(id=order_id)
+            send_order_created_emails(fresh)
+        except Exception:
+            # для диплома не валим submit из-за email
+            pass
+
+    transaction.on_commit(lambda: _send_emails_after_commit(order.id))
+
     return order, True
 
 
@@ -190,20 +191,16 @@ def submit_configuration(configuration_id: int, user: User) -> Tuple[Order, bool
 def assign_manager(order_id: int, manager_user: User, actor: User) -> Order:
     """
     Назначить менеджера на заказ.
-    actor должен быть менеджером (или админом).
-
-    ВАЖНО: НЕ делаем select_related("manager") под select_for_update(),
-    потому что manager nullable -> LEFT JOIN -> Postgres ругается на FOR UPDATE.
+    actor должен быть менеджером (staff/superuser).
     """
     _require_manager(actor)
 
     order = (
         Order.objects.select_for_update()
-        .select_related("user")  # manager НЕ трогаем, он nullable
+        .select_related("user")
         .get(id=order_id)
     )
 
-    # ✅ STEP 1: назначать менеджера можно ТОЛЬКО на NEW заказ
     if order.status != OrderStatus.NEW:
         raise ValueError("Manager can be assigned only to NEW order")
 
@@ -218,44 +215,37 @@ def assign_manager(order_id: int, manager_user: User, actor: User) -> Order:
 @transaction.atomic
 def change_status(order_id: int, actor: User, new_status: str, comment: str = "") -> Order:
     """
-    Смена статуса заказа менеджером.
+    Смена статуса заказа:
+    - staff/superuser (manager)
+    - manufacturer
+
+    Переходы валидируются через Order.transition_to() (матрица в models.py).
     Пишем историю переходов.
     """
-    _require_manager(actor)
+    if not _can_change_order_status(actor):
+        raise PermissionError("Only manager/staff or manufacturer can perform this action.")
 
     if new_status not in OrderStatus.values:
         raise ValueError(f"Unknown status: {new_status}")
 
     order = (
         Order.objects.select_for_update()
-        .select_related("user")  # manager НЕ трогаем, он nullable
+        .select_related("user")
         .get(id=order_id)
     )
 
-    # если менеджер назначен — менять может только он (или суперюзер)
-    if order.manager_id and order.manager_id != actor.id and not getattr(actor, "is_superuser", False):
-        raise PermissionError("Only assigned manager can change this order status.")
+    # Ограничение "только assigned manager" — оставим только для staff.
+    # Производителю разрешаем менять статусы независимо от manager_id (для дипломной версии).
+    if _is_manager(actor):
+        if order.manager_id and order.manager_id != actor.id and not getattr(actor, "is_superuser", False):
+            raise PermissionError("Only assigned manager can change this order status.")
 
     old_status = order.status
     if old_status == new_status:
-        return order  # no-op
+        return order
 
-    _validate_transition(old_status, new_status)
-
-    order.status = new_status
-
-    update_fields = ["status", "updated_at"]
-
-    # ✅ ШАГ 2: бизнес-фиксация дат (не перетираем, если уже стоят)
-    if new_status == OrderStatus.APPROVED and getattr(order, "quoted_at", None) is None:
-        order.quoted_at = timezone.now()
-        update_fields.append("quoted_at")
-
-    if new_status == OrderStatus.COMPLETED and getattr(order, "completed_at", None) is None:
-        order.completed_at = timezone.now()
-        update_fields.append("completed_at")
-
-    order.save(update_fields=update_fields)
+    order.transition_to(new_status)
+    order.save()  # updated_at авто-обновится
 
     OrderStatusHistory.objects.create(
         order=order,
@@ -269,15 +259,9 @@ def change_status(order_id: int, actor: User, new_status: str, comment: str = ""
 
 
 def manager_orders_qs(user: User) -> QuerySet[Order]:
-    """
-    QuerySet заказов для менеджера (для views).
-    """
     _require_manager(user)
     return Order.objects.all().select_related("user", "manager").order_by("-id")
 
 
 def user_orders_qs(user: User) -> QuerySet[Order]:
-    """
-    Заказы текущего клиента.
-    """
     return Order.objects.filter(user=user).select_related("user", "manager").order_by("-id")

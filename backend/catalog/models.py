@@ -189,10 +189,32 @@ class EquipmentModule(models.Model):
             return f"{self.price:.2f} руб."
         return dict(self.PriceType.choices)[self.price_type]
 
-    def is_compatible_with(self, equipment_type):
-        if self.applicable_to == 'BOTH':
+    def is_compatible_with(self, equipment_type: str) -> bool:
+        """
+        Совместимость модуля с типом оборудования.
+
+        Нормализация нужна из-за того, что в БД встречаются:
+          - DGU / COMPRESSOR
+          - dgu / compressor
+          - all
+          - BOTH (если где-то используешь)
+
+        По ТЗ "all" = подходит ко всем.
+        """
+        if not equipment_type:
+            return True  # если тип не передан — не блокируем
+
+        et = str(equipment_type).strip().lower()
+        at = (self.applicable_to or "").strip().lower()
+
+        if at in ("all", "any", "*"):
             return True
-        return self.applicable_to == equipment_type
+
+        # если у тебя где-то есть BOTH (как в инженерке) — тоже разрешаем
+        if at == "both":
+            return True
+
+        return at == et
 
 
 class CompatibilityRule(models.Model):

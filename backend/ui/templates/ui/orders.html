@@ -1,0 +1,104 @@
+{% extends "ui/base.html" %}
+{% block title %}Заказы • Diplom UI{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1>Заказы</h1>
+  <p class="muted">
+    API: <code>GET /api/orders/orders/</code>. Для клиента вернутся только свои, для производителя/админа — все.
+  </p>
+
+  <div class="row">
+    <button id="btn-load" class="secondary">Обновить</button>
+    <label class="field inline">
+      <span>Status</span>
+      <select id="status-filter">
+        <option value="">(all)</option>
+        <option>NEW</option>
+        <option>IN_REVIEW</option>
+        <option>APPROVED</option>
+        <option>IN_PRODUCTION</option>
+        <option>COMPLETED</option>
+        <option>REJECTED</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="orders-alert" class="alert hidden"></div>
+
+  <div class="table-wrap">
+    <table class="table" id="orders-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Number</th>
+          <th>Status</th>
+          <th>Total</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  function show(type, text) {
+    const el = $("orders-alert");
+    el.className = "alert " + (type || "");
+    el.textContent = text || "";
+    el.classList.toggle("hidden", !text);
+  }
+
+  function orderNumber(o) {
+    return o.order_number || o.number || o.code || ("#" + o.id);
+  }
+
+  function render(list) {
+    const filter = $("status-filter").value;
+    const rows = (list || [])
+      .filter(o => !filter || (o.status === filter))
+      .map(o => {
+        const id = o.id;
+        const num = orderNumber(o);
+        const st = o.status || "";
+        const total = o.total_price || o.total || "";
+        const created = o.created_at || o.created || "";
+        return `<tr data-id="${id}">
+          <td>${id}</td>
+          <td><a href="/ui/orders/${id}/">${escapeHtml(String(num))}</a></td>
+          <td>${escapeHtml(String(st))}</td>
+          <td>${escapeHtml(String(total))}</td>
+          <td class="muted">${escapeHtml(String(created))}</td>
+        </tr>`;
+      }).join("");
+
+    $("orders-table").querySelector("tbody").innerHTML =
+      rows || `<tr><td colspan="5" class="muted">Нет заказов</td></tr>`;
+  }
+
+  function escapeHtml(s) {
+    return (s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  async function load() {
+    show("", "");
+    const list = await DiplomAPI.listOrders();
+    render(list);
+    show("success", `Загружено заказов: ${(list||[]).length}`);
+  }
+
+  $("btn-load").addEventListener("click", () => load().catch(e => show("danger", String(e?.message||e))));
+  $("status-filter").addEventListener("change", () => load().catch(e => show("danger", String(e?.message||e))));
+
+  load().catch(() => show("danger", "Не удалось загрузить. Проверь логин (/ui/login/)."));
+})();
+</script>
+{% endblock %}
