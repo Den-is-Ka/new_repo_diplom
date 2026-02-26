@@ -1,0 +1,1662 @@
+[
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 1,
+    "fields": {
+      "name": "ДГУ",
+      "parent": null,
+      "equipment_type": "DGU",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "1"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Компрессор",
+      "parent": null,
+      "equipment_type": "COMPRESSOR",
+      "description": "",
+      "order": 1,
+      "is_active": true,
+      "code": "2"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Оборудование",
+      "parent": null,
+      "equipment_type": "root",
+      "description": "Корневая категория оборудования",
+      "order": 0,
+      "is_active": true,
+      "code": "ROOT"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 4,
+    "fields": {
+      "name": "до 50 кВт",
+      "parent": 1,
+      "equipment_type": "DGU",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "DGU-50"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 5,
+    "fields": {
+      "name": "до 100 кВт",
+      "parent": 1,
+      "equipment_type": "DGU",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "DGU-100"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 6,
+    "fields": {
+      "name": "до 150 кВт",
+      "parent": 1,
+      "equipment_type": "DGU",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "DGU-150"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 7,
+    "fields": {
+      "name": "свыше 150 кВт",
+      "parent": 1,
+      "equipment_type": "DGU",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "DGU-150+"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 8,
+    "fields": {
+      "name": "Компрессорная установка до 5 bar",
+      "parent": 2,
+      "equipment_type": "COMPRESSOR",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "COMP-5"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 9,
+    "fields": {
+      "name": "Компрессорная установка до 8 bar",
+      "parent": 2,
+      "equipment_type": "COMPRESSOR",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "COMP-8"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 10,
+    "fields": {
+      "name": "Компрессорная установка до 15 bar",
+      "parent": 2,
+      "equipment_type": "COMPRESSOR",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "COMP-15"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 11,
+    "fields": {
+      "name": "Компрессорная установка свыше 15 bar",
+      "parent": 2,
+      "equipment_type": "COMPRESSOR",
+      "description": "",
+      "order": 0,
+      "is_active": true,
+      "code": "COMP-15+"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 21,
+    "fields": {
+      "name": "ДГУ",
+      "parent": 3,
+      "equipment_type": "DGU",
+      "description": "Дизель-генераторные установки",
+      "order": 10,
+      "is_active": false,
+      "code": "DGU"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 22,
+    "fields": {
+      "name": "Компрессорная установка",
+      "parent": 3,
+      "equipment_type": "compressor",
+      "description": "Компрессорные установки",
+      "order": 20,
+      "is_active": true,
+      "code": "COMP"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 23,
+    "fields": {
+      "name": "ДГУ до 50 кВт",
+      "parent": 21,
+      "equipment_type": "dgu",
+      "description": "Малые мощности",
+      "order": 11,
+      "is_active": true,
+      "code": "DGU50"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 24,
+    "fields": {
+      "name": "ДГУ 50–200 кВт",
+      "parent": 21,
+      "equipment_type": "dgu",
+      "description": "Средние мощности",
+      "order": 12,
+      "is_active": true,
+      "code": "DGU200"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 25,
+    "fields": {
+      "name": "ДГУ 200–500 кВт",
+      "parent": 21,
+      "equipment_type": "dgu",
+      "description": "Высокие мощности",
+      "order": 13,
+      "is_active": true,
+      "code": "DGU500"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 26,
+    "fields": {
+      "name": "Компрессор до 10 бар",
+      "parent": 22,
+      "equipment_type": "compressor",
+      "description": "Низкое давление",
+      "order": 21,
+      "is_active": true,
+      "code": "C10"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 27,
+    "fields": {
+      "name": "Компрессор 10–30 бар",
+      "parent": 22,
+      "equipment_type": "compressor",
+      "description": "Среднее давление",
+      "order": 22,
+      "is_active": true,
+      "code": "C30"
+    }
+  },
+  {
+    "model": "catalog.equipmentcategory",
+    "pk": 28,
+    "fields": {
+      "name": "Компрессор 30–60 бар",
+      "parent": 22,
+      "equipment_type": "compressor",
+      "description": "Высокое давление",
+      "order": 23,
+      "is_active": true,
+      "code": "C60"
+    }
+  },
+  {
+    "model": "catalog.equipmentphysicaltype",
+    "pk": 1,
+    "fields": {
+      "name": "Общий",
+      "description": "",
+      "image": "",
+      "order": 0,
+      "applicable_category": "UNIVERSAL"
+    }
+  },
+  {
+    "model": "catalog.equipmentphysicaltype",
+    "pk": 5,
+    "fields": {
+      "name": "ДГУ (генератор)",
+      "description": "",
+      "image": "",
+      "order": 0,
+      "applicable_category": "UNIVERSAL"
+    }
+  },
+  {
+    "model": "catalog.equipmentphysicaltype",
+    "pk": 6,
+    "fields": {
+      "name": "Компрессор",
+      "description": "",
+      "image": "",
+      "order": 0,
+      "applicable_category": "UNIVERSAL"
+    }
+  },
+  {
+    "model": "catalog.equipmentphysicaltype",
+    "pk": 7,
+    "fields": {
+      "name": "Общее (контейнер/системы)",
+      "description": "",
+      "image": "",
+      "order": 0,
+      "applicable_category": "UNIVERSAL"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 1,
+    "fields": {
+      "name": "ДГУ до 50 кВт",
+      "category": 4,
+      "physical_type": 1,
+      "applicable_to": "DGU",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1200000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.507Z",
+      "updated_at": "2026-02-25T07:04:48.607Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 2,
+    "fields": {
+      "name": "ДГУ до 100 кВт",
+      "category": 5,
+      "physical_type": 1,
+      "applicable_to": "DGU",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1800000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.514Z",
+      "updated_at": "2026-02-25T07:14:27.134Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 3,
+    "fields": {
+      "name": "ДГУ до 150 кВт",
+      "category": 1,
+      "physical_type": 1,
+      "applicable_to": "DGU",
+      "description": "",
+      "price_type": "fixed",
+      "price": "2400000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.518Z",
+      "updated_at": "2026-02-15T15:57:07.875Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 4,
+    "fields": {
+      "name": "ДГУ свыше 150 кВт (рассчет производится индивидуально)",
+      "category": 1,
+      "physical_type": 1,
+      "applicable_to": "DGU",
+      "description": "",
+      "price_type": "fixed",
+      "price": "0.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.522Z",
+      "updated_at": "2026-02-15T15:57:07.877Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 5,
+    "fields": {
+      "name": "Компрессорная установка до 5bar",
+      "category": 2,
+      "physical_type": 1,
+      "applicable_to": "COMPRESSOR",
+      "description": "",
+      "price_type": "fixed",
+      "price": "900000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.529Z",
+      "updated_at": "2026-02-15T15:57:07.881Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 6,
+    "fields": {
+      "name": "Компрессорная установка до 8 bar",
+      "category": 2,
+      "physical_type": 1,
+      "applicable_to": "COMPRESSOR",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1300000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.535Z",
+      "updated_at": "2026-02-15T15:57:07.883Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 7,
+    "fields": {
+      "name": "Компрессорная установка до 15 bar",
+      "category": 2,
+      "physical_type": 1,
+      "applicable_to": "COMPRESSOR",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1700000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.539Z",
+      "updated_at": "2026-02-15T15:57:07.886Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 8,
+    "fields": {
+      "name": "Компрессорная установка свыше 15 bar (рассчет производится индивидуально)",
+      "category": 2,
+      "physical_type": 1,
+      "applicable_to": "COMPRESSOR",
+      "description": "",
+      "price_type": "fixed",
+      "price": "0.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-15T15:55:52.543Z",
+      "updated_at": "2026-02-15T15:57:07.888Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 9,
+    "fields": {
+      "name": "Шумоизоляция контейнера",
+      "category": 23,
+      "physical_type": 7,
+      "applicable_to": "all",
+      "description": "Демо-модуль: Шумоизоляция контейнера",
+      "price_type": "fixed",
+      "price": "250000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.184Z",
+      "updated_at": "2026-02-21T09:16:10.184Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 10,
+    "fields": {
+      "name": "Освещение промышленное",
+      "category": 23,
+      "physical_type": 7,
+      "applicable_to": "all",
+      "description": "Демо-модуль: Освещение промышленное",
+      "price_type": "fixed",
+      "price": "45000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": true,
+      "created_at": "2026-02-21T09:16:10.194Z",
+      "updated_at": "2026-02-21T09:16:10.194Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 11,
+    "fields": {
+      "name": "Охранная сигнализация",
+      "category": 23,
+      "physical_type": 7,
+      "applicable_to": "all",
+      "description": "Демо-модуль: Охранная сигнализация",
+      "price_type": "fixed",
+      "price": "60000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.201Z",
+      "updated_at": "2026-02-21T09:16:10.201Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 12,
+    "fields": {
+      "name": "Транспортные салазки",
+      "category": 23,
+      "physical_type": 7,
+      "applicable_to": "all",
+      "description": "Демо-модуль: Транспортные салазки",
+      "price_type": "fixed",
+      "price": "90000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.208Z",
+      "updated_at": "2026-02-21T09:16:10.208Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 13,
+    "fields": {
+      "name": "Глушитель повышенный",
+      "category": 24,
+      "physical_type": 5,
+      "applicable_to": "dgu",
+      "description": "Демо-модуль: Глушитель повышенный",
+      "price_type": "fixed",
+      "price": "110000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.216Z",
+      "updated_at": "2026-02-21T09:16:10.216Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 14,
+    "fields": {
+      "name": "Шкаф автоматики",
+      "category": 24,
+      "physical_type": 5,
+      "applicable_to": "dgu",
+      "description": "Демо-модуль: Шкаф автоматики",
+      "price_type": "fixed",
+      "price": "160000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": true,
+      "created_at": "2026-02-21T09:16:10.223Z",
+      "updated_at": "2026-02-21T09:16:10.223Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 15,
+    "fields": {
+      "name": "Антивибрационные опоры",
+      "category": 23,
+      "physical_type": 5,
+      "applicable_to": "dgu",
+      "description": "Демо-модуль: Антивибрационные опоры",
+      "price_type": "fixed",
+      "price": "70000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.230Z",
+      "updated_at": "2026-02-21T09:16:10.230Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 16,
+    "fields": {
+      "name": "Топливный бак увеличенный",
+      "category": 25,
+      "physical_type": 5,
+      "applicable_to": "dgu",
+      "description": "Демо-модуль: Топливный бак увеличенный",
+      "price_type": "fixed",
+      "price": "190000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.237Z",
+      "updated_at": "2026-02-21T09:16:10.237Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 17,
+    "fields": {
+      "name": "Система маслоотделения",
+      "category": 26,
+      "physical_type": 6,
+      "applicable_to": "compressor",
+      "description": "Демо-модуль: Система маслоотделения",
+      "price_type": "fixed",
+      "price": "175000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": true,
+      "created_at": "2026-02-21T09:16:10.244Z",
+      "updated_at": "2026-02-21T09:16:10.244Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 18,
+    "fields": {
+      "name": "Осушитель воздуха",
+      "category": 27,
+      "physical_type": 6,
+      "applicable_to": "compressor",
+      "description": "Демо-модуль: Осушитель воздуха",
+      "price_type": "fixed",
+      "price": "145000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.251Z",
+      "updated_at": "2026-02-21T09:16:10.251Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 19,
+    "fields": {
+      "name": "Фильтр тонкой очистки",
+      "category": 26,
+      "physical_type": 6,
+      "applicable_to": "compressor",
+      "description": "Демо-модуль: Фильтр тонкой очистки",
+      "price_type": "fixed",
+      "price": "65000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.257Z",
+      "updated_at": "2026-02-21T09:16:10.257Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 20,
+    "fields": {
+      "name": "Ресивер 500л",
+      "category": 27,
+      "physical_type": 6,
+      "applicable_to": "compressor",
+      "description": "Демо-модуль: Ресивер 500л",
+      "price_type": "fixed",
+      "price": "98000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.264Z",
+      "updated_at": "2026-02-21T09:16:10.264Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 21,
+    "fields": {
+      "name": "Демо модуль ДГУ (до 50 кВт)",
+      "category": 4,
+      "physical_type": null,
+      "applicable_to": "BOTH",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1800000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-22T16:20:23.723Z",
+      "updated_at": "2026-02-22T16:20:23.723Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 22,
+    "fields": {
+      "name": "ДГУ до 50 кВт (вариант 2)",
+      "category": 4,
+      "physical_type": 1,
+      "applicable_to": "DGU",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1200000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-25T07:09:16.140Z",
+      "updated_at": "2026-02-25T07:09:16.140Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 23,
+    "fields": {
+      "name": "ДГУ до 100 кВт (вариант 2)",
+      "category": 5,
+      "physical_type": 1,
+      "applicable_to": "DGU",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1800000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-25T07:14:46.142Z",
+      "updated_at": "2026-02-25T07:14:46.142Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 24,
+    "fields": {
+      "name": "Компрессорная установка до 5 bar (В-2)",
+      "category": 8,
+      "physical_type": 1,
+      "applicable_to": "COMPRESSOR",
+      "description": "",
+      "price_type": "fixed",
+      "price": "800000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-25T07:25:45.467Z",
+      "updated_at": "2026-02-25T07:25:45.467Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 25,
+    "fields": {
+      "name": "Компрессорная установка до 8 bar (В-2)",
+      "category": 9,
+      "physical_type": 1,
+      "applicable_to": "COMPRESSOR",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1000000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-25T07:27:23.024Z",
+      "updated_at": "2026-02-25T07:33:30.029Z"
+    }
+  },
+  {
+    "model": "catalog.equipmentmodule",
+    "pk": 26,
+    "fields": {
+      "name": "Компрессорная установка до 8 bar (В-3)",
+      "category": 9,
+      "physical_type": null,
+      "applicable_to": "BOTH",
+      "description": "",
+      "price_type": "fixed",
+      "price": "1000000.00",
+      "main_image": "",
+      "power_consumption": null,
+      "dimensions": "",
+      "weight": null,
+      "specifications": {},
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-25T07:34:24.126Z",
+      "updated_at": "2026-02-25T07:34:24.126Z"
+    }
+  },
+  {
+    "model": "catalog.compatibilityrule",
+    "pk": 1,
+    "fields": {
+      "name": "Обязательные блоки: электрика + климат",
+      "rule_type": "",
+      "description": "Обязательные блоки: электрика + климат",
+      "category": null,
+      "max_quantity": null,
+      "required_module": null,
+      "is_active": true,
+      "excluded_categories": [],
+      "modules": []
+    }
+  },
+  {
+    "model": "catalog.compatibilityrule",
+    "pk": 2,
+    "fields": {
+      "name": "DGU-модули только для ДГУ",
+      "rule_type": "",
+      "description": "DGU-модули только для ДГУ",
+      "category": null,
+      "max_quantity": null,
+      "required_module": null,
+      "is_active": true,
+      "excluded_categories": [],
+      "modules": []
+    }
+  },
+  {
+    "model": "catalog.compatibilityrule",
+    "pk": 3,
+    "fields": {
+      "name": "Компрессор-модули только для компрессора",
+      "rule_type": "",
+      "description": "Компрессор-модули только для компрессора",
+      "category": null,
+      "max_quantity": null,
+      "required_module": null,
+      "is_active": true,
+      "excluded_categories": [],
+      "modules": []
+    }
+  },
+  {
+    "model": "catalog.containerconfiguration",
+    "pk": 1,
+    "fields": {
+      "height": "2600",
+      "length": "6000",
+      "width": "2500",
+      "container_type": "metal",
+      "fire_resistance": "III",
+      "floor_insulation_thickness": "100",
+      "floor_sheet_thickness": "3",
+      "bottom_sheet_thickness": "1.5",
+      "additional_floor": "none",
+      "roof_insulation_thickness": "100",
+      "roof_sheet_thickness": "1.5",
+      "roof_slope": "sloped",
+      "wall_insulation_thickness": "100",
+      "wall_sheet_thickness": "1.5",
+      "wall_panel_type": "profiled",
+      "operational_type": "ground",
+      "branding": "not_required",
+      "packaging": "required",
+      "name": "Контейнер 20ft (стандарт)",
+      "description": "",
+      "base_price": "2242500.00",
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.298Z",
+      "updated_at": "2026-02-21T09:16:10.298Z"
+    }
+  },
+  {
+    "model": "catalog.containerconfiguration",
+    "pk": 2,
+    "fields": {
+      "height": "2600",
+      "length": "6000",
+      "width": "2500",
+      "container_type": "metal",
+      "fire_resistance": "III",
+      "floor_insulation_thickness": "100",
+      "floor_sheet_thickness": "3",
+      "bottom_sheet_thickness": "1.5",
+      "additional_floor": "none",
+      "roof_insulation_thickness": "100",
+      "roof_sheet_thickness": "1.5",
+      "roof_slope": "sloped",
+      "wall_insulation_thickness": "100",
+      "wall_sheet_thickness": "1.5",
+      "wall_panel_type": "profiled",
+      "operational_type": "ground",
+      "branding": "not_required",
+      "packaging": "required",
+      "name": "Контейнер 40ft (усиленный)",
+      "description": "",
+      "base_price": "2242500.00",
+      "is_active": true,
+      "is_default": false,
+      "created_at": "2026-02-21T09:16:10.307Z",
+      "updated_at": "2026-02-21T09:16:10.307Z"
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 1,
+    "fields": {
+      "key": "grp_2_1",
+      "code": "2.1",
+      "title": "Группа надежности электроснабжения",
+      "selection_mode": "single",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 2,
+    "fields": {
+      "key": "grp_2_2",
+      "code": "2.2",
+      "title": "Климатическое исполнение",
+      "selection_mode": "single",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 3,
+    "fields": {
+      "key": "grp_2_3",
+      "code": "2.3",
+      "title": "Электрическое освещение",
+      "selection_mode": "multi",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 4,
+    "fields": {
+      "key": "grp_2_4",
+      "code": "2.4",
+      "title": "Отопление",
+      "selection_mode": "multi",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 5,
+    "fields": {
+      "key": "grp_2_5",
+      "code": "2.5",
+      "title": "Вентиляция",
+      "selection_mode": "multi",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 6,
+    "fields": {
+      "key": "grp_2_6",
+      "code": "2.6",
+      "title": "Управление микроклиматом",
+      "selection_mode": "single",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 7,
+    "fields": {
+      "key": "grp_2_7",
+      "code": "2.7",
+      "title": "Пожарная сигнализация (обнаружение и оповещение)",
+      "selection_mode": "single",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 8,
+    "fields": {
+      "key": "grp_2_8",
+      "code": "2.8",
+      "title": "Пожаротушение",
+      "selection_mode": "single",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 9,
+    "fields": {
+      "key": "grp_2_9",
+      "code": "2.9",
+      "title": "Место установки (решение по размещению)",
+      "selection_mode": "single",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 10,
+    "fields": {
+      "key": "electric",
+      "code": "EL",
+      "title": "Электрика",
+      "selection_mode": "single",
+      "order": 10,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 11,
+    "fields": {
+      "key": "climate",
+      "code": "CL",
+      "title": "Климат",
+      "selection_mode": "single",
+      "order": 20,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemgroup",
+    "pk": 12,
+    "fields": {
+      "key": "security",
+      "code": "SEC",
+      "title": "Безопасность",
+      "selection_mode": "single",
+      "order": 30,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 1,
+    "fields": {
+      "group": 1,
+      "code": "2.1.1",
+      "title": "Группа надежности III",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 2,
+    "fields": {
+      "group": 1,
+      "code": "2.1.2",
+      "title": "Группа надежности II",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 3,
+    "fields": {
+      "group": 1,
+      "code": "2.1.3",
+      "title": "Группа надежности I",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 4,
+    "fields": {
+      "group": 2,
+      "code": "2.2.1",
+      "title": "Исполнение для уличных приборов -40 С",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 5,
+    "fields": {
+      "group": 2,
+      "code": "2.2.2",
+      "title": "Исполнение для уличных приборов -50 С",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 6,
+    "fields": {
+      "group": 2,
+      "code": "2.2.3",
+      "title": "Исполнение для уличных приборов -60 С",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 7,
+    "fields": {
+      "group": 3,
+      "code": "2.3.1",
+      "title": "Рабочее",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 8,
+    "fields": {
+      "group": 3,
+      "code": "2.3.2",
+      "title": "Аварийное",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 9,
+    "fields": {
+      "group": 3,
+      "code": "2.3.3",
+      "title": "Уличное",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 10,
+    "fields": {
+      "group": 3,
+      "code": "2.3.4",
+      "title": "Ремонтное",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 11,
+    "fields": {
+      "group": 4,
+      "code": "2.4.1",
+      "title": "Электроконвекторы",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 12,
+    "fields": {
+      "group": 4,
+      "code": "2.4.2",
+      "title": "Тепловая завеса",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 13,
+    "fields": {
+      "group": 4,
+      "code": "2.4.3",
+      "title": "Тепловая пушка",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 14,
+    "fields": {
+      "group": 4,
+      "code": "2.4.4",
+      "title": "Кондиционер",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 15,
+    "fields": {
+      "group": 5,
+      "code": "2.5.1",
+      "title": "Основная приточная",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 16,
+    "fields": {
+      "group": 5,
+      "code": "2.5.2",
+      "title": "Основная вытяжная",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 17,
+    "fields": {
+      "group": 5,
+      "code": "2.5.3",
+      "title": "Рекупирация",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 18,
+    "fields": {
+      "group": 6,
+      "code": "2.6.1",
+      "title": "Не требуется",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 19,
+    "fields": {
+      "group": 6,
+      "code": "2.6.2",
+      "title": "Термостаты",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 20,
+    "fields": {
+      "group": 6,
+      "code": "2.6.3",
+      "title": "Овен ПР200",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 21,
+    "fields": {
+      "group": 6,
+      "code": "2.6.4",
+      "title": "Контроллер Сигнетик",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 22,
+    "fields": {
+      "group": 7,
+      "code": "2.7.1",
+      "title": "Не требуется",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 23,
+    "fields": {
+      "group": 7,
+      "code": "2.7.2",
+      "title": "Болид",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 24,
+    "fields": {
+      "group": 7,
+      "code": "2.7.3",
+      "title": "Рубеж",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 25,
+    "fields": {
+      "group": 8,
+      "code": "2.8.1",
+      "title": "Не требуется",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 26,
+    "fields": {
+      "group": 8,
+      "code": "2.8.2",
+      "title": "Порошковое",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 27,
+    "fields": {
+      "group": 8,
+      "code": "2.8.3",
+      "title": "Аэрозольное",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 28,
+    "fields": {
+      "group": 8,
+      "code": "2.8.4",
+      "title": "Хладон",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 29,
+    "fields": {
+      "group": 9,
+      "code": "2.9.1",
+      "title": "Автономно (в контейнере)",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 30,
+    "fields": {
+      "group": 9,
+      "code": "2.9.2",
+      "title": "Удаленно (пульт управления оператора)",
+      "applicability": "BOTH",
+      "price_type": "fixed",
+      "price": "1000.00",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 31,
+    "fields": {
+      "group": 10,
+      "code": "EL1",
+      "title": "Щит распределительный",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "95000.00",
+      "order": 10,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 32,
+    "fields": {
+      "group": 10,
+      "code": "EL2",
+      "title": "ИБП (UPS) 5 кВА",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "130000.00",
+      "order": 20,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 33,
+    "fields": {
+      "group": 10,
+      "code": "EL3",
+      "title": "Кабельные вводы/лотки",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "40000.00",
+      "order": 30,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 34,
+    "fields": {
+      "group": 11,
+      "code": "CL1",
+      "title": "Кондиционер промышленный",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "220000.00",
+      "order": 10,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 35,
+    "fields": {
+      "group": 11,
+      "code": "CL2",
+      "title": "Обогреватели 2×3кВт",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "65000.00",
+      "order": 20,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 36,
+    "fields": {
+      "group": 11,
+      "code": "CL3",
+      "title": "Вентиляция усиленная",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "120000.00",
+      "order": 30,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 37,
+    "fields": {
+      "group": 12,
+      "code": "S1",
+      "title": "Датчики дыма/температуры",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "35000.00",
+      "order": 10,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 38,
+    "fields": {
+      "group": 12,
+      "code": "S2",
+      "title": "Система контроля доступа",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "125000.00",
+      "order": 20,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.engineeringsystemoption",
+    "pk": 39,
+    "fields": {
+      "group": 12,
+      "code": "S3",
+      "title": "Система пожаротушения",
+      "applicability": "all",
+      "price_type": "fixed",
+      "price": "180000.00",
+      "order": 30,
+      "is_active": true
+    }
+  }
+]
