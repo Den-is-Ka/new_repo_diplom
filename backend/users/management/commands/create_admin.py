@@ -1,5 +1,6 @@
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
 
 class Command(BaseCommand):
     help = "Create demo superuser with required custom fields."
@@ -33,6 +34,6 @@ class Command(BaseCommand):
         u.set_password(password)
         u.save()
 
-        self.stdout.write(self.style.SUCCESS(
-            f"OK: username={username} created={created} id={u.id}"
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(f"OK: username={username} created={created} id={u.id}")
+        )

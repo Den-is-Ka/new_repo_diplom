@@ -1,13 +1,15 @@
-﻿from rest_framework import serializers
-from django.utils import timezone
+﻿from django.utils import timezone
+from rest_framework import serializers
+
+from catalog.models import EngineeringSystemOption, EquipmentCategory, EquipmentModule
+from users.serializers import UserSerializer
 
 from .models import Configuration, ConfigurationModule
-from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
-from users.serializers import UserSerializer
 
 
 class ConfigurationSerializer(serializers.ModelSerializer):
     """Сериализатор для вывода конфигурации"""
+
     user = UserSerializer(read_only=True)
     main_category = serializers.StringRelatedField(read_only=True)
     sub_category = serializers.StringRelatedField(read_only=True)
@@ -117,19 +119,33 @@ class ConfigurationCreateSerializer(serializers.ModelSerializer):
         # Проверка принадлежности sub_category к main_category
         elif sub_category and main_category:
             current = sub_category
-            while current.parent and current.parent != main_category and current.parent.parent:
+            while (
+                current.parent
+                and current.parent != main_category
+                and current.parent.parent
+            ):
                 current = current.parent
 
             if current.parent != main_category:
                 raise serializers.ValidationError(
-                    {"sub_category_id": "Выбранная подкатегория не принадлежит указанной основной категории"}
+                    {
+                        "sub_category_id": "Выбранная подкатегория не принадлежит указанной основной категории"
+                    }
                 )
 
         # ✅ FIX: если name не передали — создадим дефолт прямо тут
         name = (data.get("name") or "").strip()
         if not name:
-            main_name = getattr(data.get("main_category"), "name", "") if data.get("main_category") else ""
-            sub_name = getattr(data.get("sub_category"), "name", "") if data.get("sub_category") else ""
+            main_name = (
+                getattr(data.get("main_category"), "name", "")
+                if data.get("main_category")
+                else ""
+            )
+            sub_name = (
+                getattr(data.get("sub_category"), "name", "")
+                if data.get("sub_category")
+                else ""
+            )
             ts = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
             if main_name and sub_name:
                 data["name"] = f"Draft: {main_name} / {sub_name} ({ts})"
@@ -141,15 +157,21 @@ class ConfigurationCreateSerializer(serializers.ModelSerializer):
         # Проверяем совместимость модулей
         modules = data.get("modules", [])
         equipment_type = (
-            data.get("main_category").equipment_type if data.get("main_category") else None
+            data.get("main_category").equipment_type
+            if data.get("main_category")
+            else None
         )
 
         if equipment_type and modules:
             for module in modules:
                 # В твоём проекте уже есть метод is_compatible_with
-                if hasattr(module, "is_compatible_with") and not module.is_compatible_with(equipment_type):
+                if hasattr(
+                    module, "is_compatible_with"
+                ) and not module.is_compatible_with(equipment_type):
                     raise serializers.ValidationError(
-                        {"module_ids": f'Модуль "{module.name}" не совместим с выбранным типом оборудования'}
+                        {
+                            "module_ids": f'Модуль "{module.name}" не совместим с выбранным типом оборудования'
+                        }
                     )
 
         return data
@@ -172,11 +194,14 @@ class ConfigurationCreateSerializer(serializers.ModelSerializer):
 
 class ConfigurationModuleSerializer(serializers.ModelSerializer):
     """Сериализатор для связи конфигурации и модулей"""
+
     module_name = serializers.CharField(source="module.name", read_only=True)
     module_price = serializers.DecimalField(
         source="module.price", max_digits=10, decimal_places=2, read_only=True
     )
-    module_price_type = serializers.CharField(source="module.price_type", read_only=True)
+    module_price_type = serializers.CharField(
+        source="module.price_type", read_only=True
+    )
 
     class Meta:
         model = ConfigurationModule
@@ -193,9 +218,12 @@ class ConfigurationModuleSerializer(serializers.ModelSerializer):
 
 class ConfigurationValidateSerializer(serializers.Serializer):
     """Сериализатор для валидации конфигурации"""
+
     is_valid = serializers.BooleanField(read_only=True)
     errors = serializers.ListField(child=serializers.CharField(), read_only=True)
-    total_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    total_price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, read_only=True
+    )
 
 
 class ConfigurationSetEngineeringSerializer(serializers.Serializer):
@@ -203,6 +231,7 @@ class ConfigurationSetEngineeringSerializer(serializers.Serializer):
     Для action set_engineering:
     присылаем список id опций инженерных систем.
     """
+
     engineering_option_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1),
         allow_empty=True,
@@ -215,5 +244,7 @@ class ConfigurationSetEngineeringSerializer(serializers.Serializer):
         found = set(qs.values_list("id", flat=True))
         missing = [x for x in value if x not in found]
         if missing:
-            raise serializers.ValidationError(f"Engineering options not found or inactive: {missing}")
+            raise serializers.ValidationError(
+                f"Engineering options not found or inactive: {missing}"
+            )
         return value

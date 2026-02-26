@@ -61,15 +61,21 @@ def _module_names_by_ids(ids: Set[int]) -> List[str]:
 
 def _category_codes_by_ids(ids: Set[int]) -> List[str]:
     """Коды категорий по id (для человекочитаемых ошибок)."""
-    from catalog.models import EquipmentCategory  # локальный импорт, чтобы избежать циклов
+    from catalog.models import (
+        EquipmentCategory,  # локальный импорт, чтобы избежать циклов
+    )
 
     if not ids:
         return []
-    qs = EquipmentCategory.objects.filter(id__in=list(ids)).values_list("code", flat=True)
+    qs = EquipmentCategory.objects.filter(id__in=list(ids)).values_list(
+        "code", flat=True
+    )
     return sorted({str(x) for x in qs if x})
 
 
-def _validate_required_blocks(cfg: Configuration, issues: List[ValidationIssue]) -> None:
+def _validate_required_blocks(
+    cfg: Configuration, issues: List[ValidationIssue]
+) -> None:
     """
     Required blocks:
       - по коду модуля (EquipmentModule.code если есть)
@@ -120,7 +126,9 @@ def _validate_required_blocks(cfg: Configuration, issues: List[ValidationIssue])
         )
 
 
-def _validate_compatibility_rules(cfg: Configuration, issues: List[ValidationIssue]) -> None:
+def _validate_compatibility_rules(
+    cfg: Configuration, issues: List[ValidationIssue]
+) -> None:
     """
     Реальная проверка CompatibilityRule из catalog.models
 
@@ -167,7 +175,11 @@ def _validate_compatibility_rules(cfg: Configuration, issues: List[ValidationIss
             if len(picked_in_rule) >= 2:
                 names = _module_names_by_ids(set(picked_in_rule))
                 pretty = ", ".join(names) if names else "несколько модулей"
-                kind = "взаимоисключение" if rtype == CompatibilityRule.RuleType.EXCLUSION else "группа"
+                kind = (
+                    "взаимоисключение"
+                    if rtype == CompatibilityRule.RuleType.EXCLUSION
+                    else "группа"
+                )
                 issues.append(
                     ValidationIssue(
                         code="INCOMPATIBLE_MODULES",
@@ -222,14 +234,22 @@ def _validate_compatibility_rules(cfg: Configuration, issues: List[ValidationIss
         # CATEGORY_EXCLUSION
         if rtype == CompatibilityRule.RuleType.CATEGORY_EXCLUSION:
             if rule.category_id and rule.category_id in selected_category_ids:
-                excluded_ids = set(rule.excluded_categories.values_list("id", flat=True))
+                excluded_ids = set(
+                    rule.excluded_categories.values_list("id", flat=True)
+                )
                 bad = selected_category_ids.intersection(excluded_ids)
                 if bad:
                     excluded_codes = _category_codes_by_ids(excluded_ids)
                     bad_codes = _category_codes_by_ids(bad)
-                    exc_pretty = ", ".join(excluded_codes) if excluded_codes else "категории"
+                    exc_pretty = (
+                        ", ".join(excluded_codes) if excluded_codes else "категории"
+                    )
                     bad_pretty = ", ".join(bad_codes) if bad_codes else "категории"
-                    cat_code = getattr(rule.category, "code", None) if getattr(rule, "category", None) else None
+                    cat_code = (
+                        getattr(rule.category, "code", None)
+                        if getattr(rule, "category", None)
+                        else None
+                    )
 
                     issues.append(
                         ValidationIssue(

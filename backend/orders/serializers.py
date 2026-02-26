@@ -22,5 +22,13 @@ class ChangeStatusSerializer(serializers.Serializer):
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderStatusHistory
-        fields = ("id", "order", "from_status", "to_status", "comment", "changed_by", "created_at")
+        fields = (
+            "id",
+            "order",
+            "from_status",
+            "to_status",
+            "comment",
+            "changed_by",
+            "created_at",
+        )
         read_only_fields = fields

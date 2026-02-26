@@ -1,17 +1,17 @@
-import pytest
 from datetime import timedelta
 
+import pytest
 from django.utils import timezone
 from model_bakery import baker
 from rest_framework.exceptions import ValidationError
 
 from orders.models import Order, OrderStatus
-from orders.services import submit_configuration, assign_manager, change_status
-
+from orders.services import assign_manager, change_status, submit_configuration
 
 # =========================
 # submit workflow
 # =========================
+
 
 @pytest.mark.django_db
 def test_submit_creates_order(configuration_with_module, customer):
@@ -53,8 +53,11 @@ def test_submit_rejects_empty_configuration(configuration, customer):
 # assign manager
 # =========================
 
+
 @pytest.mark.django_db
-def test_assign_manager_sets_manager_and_repeat_is_safe(configuration_with_module, customer, manager):
+def test_assign_manager_sets_manager_and_repeat_is_safe(
+    configuration_with_module, customer, manager
+):
     order, _ = submit_configuration(configuration_with_module.id, customer)
 
     order1 = assign_manager(order_id=order.id, manager_user=manager, actor=manager)
@@ -73,8 +76,10 @@ def test_assign_manager_sets_manager_and_repeat_is_safe(configuration_with_modul
 
 @pytest.mark.django_db
 def test_assign_manager_only_for_new_status():
-    actor = baker.make("users.User", is_staff=True)      # кто выполняет действие (менеджер/админ)
-    manager_user = baker.make("users.User", is_staff=True)    # кого назначаем менеджером
+    actor = baker.make(
+        "users.User", is_staff=True
+    )  # кто выполняет действие (менеджер/админ)
+    manager_user = baker.make("users.User", is_staff=True)  # кого назначаем менеджером
 
     order = baker.make(Order, status=OrderStatus.IN_REVIEW, manager=None)
 
@@ -98,12 +103,17 @@ def test_assign_manager_only_new_forbidden_when_not_new(manager):
 # change status
 # =========================
 
+
 @pytest.mark.django_db
-def test_change_status_rejects_illegal_transition(configuration_with_module, customer, manager):
+def test_change_status_rejects_illegal_transition(
+    configuration_with_module, customer, manager
+):
     order, _ = submit_configuration(configuration_with_module.id, customer)
 
     with pytest.raises(ValueError):
-        change_status(order_id=order.id, new_status=OrderStatus.COMPLETED, actor=manager)
+        change_status(
+            order_id=order.id, new_status=OrderStatus.COMPLETED, actor=manager
+        )
 
 
 @pytest.mark.django_db
@@ -137,7 +147,7 @@ def test_change_status_sets_quoted_at_on_approved():
     order = baker.make(
         Order,
         status=OrderStatus.IN_REVIEW,
-        manager=actor,       # чтобы прошла проверка "assigned manager"
+        manager=actor,  # чтобы прошла проверка "assigned manager"
         quoted_at=None,
     )
 

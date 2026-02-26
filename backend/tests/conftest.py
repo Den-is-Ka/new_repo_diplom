@@ -66,7 +66,9 @@ def auth_client(db, api_client):
         phone="+79990000999",
     )
 
-    r = api_client.post("/api/token/", {"username": uname, "password": "client123"}, format="json")
+    r = api_client.post(
+        "/api/token/", {"username": uname, "password": "client123"}, format="json"
+    )
     assert r.status_code == 200, r.content
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
     return api_client
@@ -80,10 +82,14 @@ def _disable_static_manifest_strict(settings):
     может падать на static('ui/app.css'). Переключаемся на обычное хранилище.
     """
     storages = getattr(settings, "STORAGES", None) or {}
-    default_storage = storages.get("default", {"BACKEND": "django.core.files.storage.FileSystemStorage"})
+    default_storage = storages.get(
+        "default", {"BACKEND": "django.core.files.storage.FileSystemStorage"}
+    )
     settings.STORAGES = {
         "default": default_storage,
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
     }
 
 

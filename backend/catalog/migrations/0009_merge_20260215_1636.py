@@ -6,9 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('catalog', '0008_create_equipmentphysicaltype_table'),
-        ('catalog', '0008_sync_catalog_schema'),
+        ("catalog", "0008_create_equipmentphysicaltype_table"),
+        ("catalog", "0008_sync_catalog_schema"),
     ]
 
-    operations = [
-    ]
+    operations = []

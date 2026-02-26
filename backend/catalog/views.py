@@ -3,7 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import EngineeringSystemGroup, EngineeringSystemOption
-from .serializers import EngineeringSystemGroupSerializer, EngineeringSystemOptionSerializer
+from .serializers import (
+    EngineeringSystemGroupSerializer,
+    EngineeringSystemOptionSerializer,
+)
 
 
 class EngineeringSystemGroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -13,6 +16,7 @@ class EngineeringSystemGroupViewSet(viewsets.ReadOnlyModelViewSet):
     - сортировка по order
     - фильтр is_active через query param
     """
+
     serializer_class = EngineeringSystemGroupSerializer
 
     def get_queryset(self):
@@ -35,7 +39,9 @@ class EngineeringSystemGroupViewSet(viewsets.ReadOnlyModelViewSet):
         - фильтр is_active через query param
         """
         group = self.get_object()
-        qs = EngineeringSystemOption.objects.filter(group=group).order_by("order", "code")
+        qs = EngineeringSystemOption.objects.filter(group=group).order_by(
+            "order", "code"
+        )
 
         is_active = request.query_params.get("is_active")
         if is_active is not None:

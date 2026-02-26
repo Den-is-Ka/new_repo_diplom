@@ -19,9 +19,13 @@ def test_required_blocks_rejects_when_missing(settings, configuration_with_modul
 
 
 @pytest.mark.django_db
-def test_required_blocks_passes_when_requirements_empty(settings, configuration_with_module):
+def test_required_blocks_passes_when_requirements_empty(
+    settings, configuration_with_module
+):
     # Когда списки пустые — правило выключено и валидация не падает
     settings.CONFIG_REQUIRED_CATEGORY_CODES = []
     settings.CONFIG_REQUIRED_MODULE_CODES = []
 
-    validate_configuration_for_submit(configuration_with_module)  # не должно кидать исключение
+    validate_configuration_for_submit(
+        configuration_with_module
+    )  # не должно кидать исключение

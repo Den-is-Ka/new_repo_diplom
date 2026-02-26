@@ -160,4 +160,6 @@ def test_category_exclusion_blocks_excluded_categories(configuration):
         validate_configuration_for_submit(configuration)
 
     payload = e.value.detail
-    assert any(str(d["code"]) == "EXCLUDED_CATEGORY_SELECTED" for d in payload["details"])
+    assert any(
+        str(d["code"]) == "EXCLUDED_CATEGORY_SELECTED" for d in payload["details"]
+    )

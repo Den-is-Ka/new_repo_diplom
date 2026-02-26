@@ -46,7 +46,9 @@ def _get_manufacturer_emails() -> List[str]:
     return list(qs.values_list("email", flat=True))
 
 
-def _send_html_email(subject: str, to: List[str], template_name: str, context: dict) -> None:
+def _send_html_email(
+    subject: str, to: List[str], template_name: str, context: dict
+) -> None:
     """
     Отправка HTML письма. Ошибки не пробрасываем (чтобы submit не падал),
     но выводим в консоль через print, чтобы на защите было видно, если что.
@@ -100,4 +102,6 @@ def send_order_created_emails(order: Order) -> None:
             context={"order": order},
         )
     else:
-        print(f"[email_service] Manufacturer emails not found (no MANUFACTURER_NOTIFY_EMAIL and no group users).")
+        print(
+            f"[email_service] Manufacturer emails not found (no MANUFACTURER_NOTIFY_EMAIL and no group users)."
+        )

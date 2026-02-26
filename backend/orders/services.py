@@ -7,11 +7,10 @@ from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from users.roles import is_manufacturer
-
 from configurator.models import Configuration
 from configurator.services import validate_configuration_for_submit
 from orders.models import Order, OrderStatus, OrderStatusHistory
+from users.roles import is_manufacturer
 
 User = get_user_model()
 
@@ -22,7 +21,9 @@ def _is_manager(user: User) -> bool:
     """
     if not user or not user.is_authenticated:
         return False
-    return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+    return bool(
+        getattr(user, "is_staff", False) or getattr(user, "is_superuser", False)
+    )
 
 
 def _require_manager(user: User) -> None:
@@ -36,7 +37,11 @@ def _can_change_order_status(actor: User) -> bool:
     - staff/superuser (manager)
     - manufacturer (группа manufacturer)
     """
-    return bool(actor and actor.is_authenticated and (_is_manager(actor) or is_manufacturer(actor)))
+    return bool(
+        actor
+        and actor.is_authenticated
+        and (_is_manager(actor) or is_manufacturer(actor))
+    )
 
 
 def _generate_order_number() -> str:
@@ -73,7 +78,9 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
     engineering_rel = getattr(cfg, "engineering_items", None)
 
     if engineering_rel is not None:
-        items = engineering_rel.select_related("engineering_system", "engineering_system__group").all()
+        items = engineering_rel.select_related(
+            "engineering_system", "engineering_system__group"
+        ).all()
 
         for item in items:
             es = item.engineering_system  # EngineeringSystemOption
@@ -82,7 +89,9 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
             group_obj = getattr(es, "group", None)
             group_title = None
             if group_obj is not None:
-                group_title = getattr(group_obj, "title", None) or getattr(group_obj, "name", None)
+                group_title = getattr(group_obj, "title", None) or getattr(
+                    group_obj, "name", None
+                )
 
             price_at_selection = getattr(item, "price_at_selection", None)
             if price_at_selection is None:
@@ -94,7 +103,11 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
                     "code": getattr(es, "code", None),
                     "title": es_title,
                     "group": group_title,
-                    "price": str(price_at_selection) if price_at_selection is not None else None,
+                    "price": (
+                        str(price_at_selection)
+                        if price_at_selection is not None
+                        else None
+                    ),
                     "quantity": getattr(item, "quantity", 1),
                 }
             )
@@ -102,7 +115,9 @@ def _build_snapshot_min(cfg: Configuration) -> Dict[str, Any]:
     # ---------- contacts ----------
     u = getattr(cfg, "user", None)
 
-    company_name = getattr(cfg, "company_name", None) or (getattr(u, "company_name", None) if u else None)
+    company_name = getattr(cfg, "company_name", None) or (
+        getattr(u, "company_name", None) if u else None
+    )
     email = getattr(cfg, "email", None) or (getattr(u, "email", None) if u else None)
     phone = (
         getattr(cfg, "phone", None)
@@ -138,8 +153,7 @@ def submit_configuration(configuration_id: int, user: User) -> Tuple[Order, bool
       - после создания заказа отправляем уведомления (клиенту + производителю)
     """
     cfg = (
-        Configuration.objects
-        .select_for_update()
+        Configuration.objects.select_for_update()
         .select_related("user")
         .get(id=configuration_id, user=user)
     )
@@ -195,11 +209,7 @@ def assign_manager(order_id: int, manager_user: User, actor: User) -> Order:
     """
     _require_manager(actor)
 
-    order = (
-        Order.objects.select_for_update()
-        .select_related("user")
-        .get(id=order_id)
-    )
+    order = Order.objects.select_for_update().select_related("user").get(id=order_id)
 
     if order.status != OrderStatus.NEW:
         raise ValueError("Manager can be assigned only to NEW order")
@@ -213,7 +223,9 @@ def assign_manager(order_id: int, manager_user: User, actor: User) -> Order:
 
 
 @transaction.atomic
-def change_status(order_id: int, actor: User, new_status: str, comment: str = "") -> Order:
+def change_status(
+    order_id: int, actor: User, new_status: str, comment: str = ""
+) -> Order:
     """
     Смена статуса заказа:
     - staff/superuser (manager)
@@ -223,21 +235,23 @@ def change_status(order_id: int, actor: User, new_status: str, comment: str = ""
     Пишем историю переходов.
     """
     if not _can_change_order_status(actor):
-        raise PermissionError("Only manager/staff or manufacturer can perform this action.")
+        raise PermissionError(
+            "Only manager/staff or manufacturer can perform this action."
+        )
 
     if new_status not in OrderStatus.values:
         raise ValueError(f"Unknown status: {new_status}")
 
-    order = (
-        Order.objects.select_for_update()
-        .select_related("user")
-        .get(id=order_id)
-    )
+    order = Order.objects.select_for_update().select_related("user").get(id=order_id)
 
     # Ограничение "только assigned manager" — оставим только для staff.
     # Производителю разрешаем менять статусы независимо от manager_id (для дипломной версии).
     if _is_manager(actor):
-        if order.manager_id and order.manager_id != actor.id and not getattr(actor, "is_superuser", False):
+        if (
+            order.manager_id
+            and order.manager_id != actor.id
+            and not getattr(actor, "is_superuser", False)
+        ):
             raise PermissionError("Only assigned manager can change this order status.")
 
     old_status = order.status
@@ -264,4 +278,8 @@ def manager_orders_qs(user: User) -> QuerySet[Order]:
 
 
 def user_orders_qs(user: User) -> QuerySet[Order]:
-    return Order.objects.filter(user=user).select_related("user", "manager").order_by("-id")
+    return (
+        Order.objects.filter(user=user)
+        .select_related("user", "manager")
+        .order_by("-id")
+    )

@@ -1,9 +1,8 @@
 ﻿from django.urls import path
+from drf_spectacular.utils import extend_schema  # ✅ добавили
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
-
-from drf_spectacular.utils import extend_schema  # ✅ добавили
 
 from .views import OrderViewSet
 

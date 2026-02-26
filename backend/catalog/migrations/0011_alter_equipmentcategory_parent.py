@@ -7,13 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('catalog', '0010_alter_equipmentmodule_physical_type'),
+        ("catalog", "0010_alter_equipmentmodule_physical_type"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='equipmentcategory',
-            name='parent',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='catalog.equipmentcategory', verbose_name='Родительская категория'),
+            model_name="equipmentcategory",
+            name="parent",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="children",
+                to="catalog.equipmentcategory",
+                verbose_name="Родительская категория",
+            ),
         ),
     ]

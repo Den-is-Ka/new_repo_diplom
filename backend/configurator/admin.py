@@ -1,6 +1,6 @@
 ﻿from django.contrib import admin
 
-from .models import Configuration, ConfigurationModule, ConfigurationEngineeringSystem
+from .models import Configuration, ConfigurationEngineeringSystem, ConfigurationModule
 
 
 class ConfigurationModuleInline(admin.TabularInline):
@@ -31,4 +31,8 @@ class ConfigurationModuleAdmin(admin.ModelAdmin):
 @admin.register(ConfigurationEngineeringSystem)
 class ConfigurationEngineeringSystemAdmin(admin.ModelAdmin):
     list_display = ("id", "configuration", "engineering_system", "quantity")
-    search_fields = ("configuration__id", "engineering_system__title", "engineering_system__code")
+    search_fields = (
+        "configuration__id",
+        "engineering_system__title",
+        "engineering_system__code",
+    )

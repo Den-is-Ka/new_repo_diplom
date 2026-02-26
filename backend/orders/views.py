@@ -17,7 +17,9 @@ from .serializers import (
 from .services import assign_manager, change_status
 
 
-class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class OrderViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     """
     - GET  /api/orders/orders/                 list (staff: all, manufacturer: all, user: own) + ?status=
     - GET  /api/orders/orders/{id}/            retrieve
@@ -27,6 +29,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
     - POST /api/orders/orders/{id}/change_status/    (staff or manufacturer)
     - GET  /api/orders/orders/{id}/history/          status history
     """
+
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated, IsOrderOwnerOrStaff]
 
@@ -75,7 +78,10 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         Менеджерский эндпоинт (MVP: manager = staff).
         """
         if not request.user.is_staff:
-            return Response({"detail": "Only manager/staff can access."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only manager/staff can access."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         qs = (
             Order.objects.all()
@@ -95,7 +101,10 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         Назначение менеджера — только staff.
         """
         if not request.user.is_staff:
-            return Response({"detail": "Only manager/staff can assign manager."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only manager/staff can assign manager."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         order = self.get_object()
 
@@ -107,10 +116,15 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         try:
             manager_user = User.objects.get(id=manager_id)
         except User.DoesNotExist:
-            return Response({"detail": "Manager user not found."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Manager user not found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            updated = assign_manager(order_id=order.id, manager_user=manager_user, actor=request.user)
+            updated = assign_manager(
+                order_id=order.id, manager_user=manager_user, actor=request.user
+            )
         except (ValueError, PermissionError) as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -135,7 +149,12 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         comment = s.validated_data.get("comment", "")
 
         try:
-            updated = change_status(order_id=order.id, actor=request.user, new_status=new_status, comment=comment)
+            updated = change_status(
+                order_id=order.id,
+                actor=request.user,
+                new_status=new_status,
+                comment=comment,
+            )
         except PermissionError as e:
             return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except ValueError as e:
@@ -151,8 +170,7 @@ class OrderViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.Ge
         """
         order = self.get_object()
         qs = (
-            OrderStatusHistory.objects
-            .filter(order_id=order.id)
+            OrderStatusHistory.objects.filter(order_id=order.id)
             .select_related("changed_by")
             .order_by("created_at")
         )

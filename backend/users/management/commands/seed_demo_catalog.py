@@ -49,17 +49,27 @@ class Command(BaseCommand):
         if not opts["skip_fixtures"]:
             self.stdout.write(self.style.WARNING("[1/2] Loading fixture..."))
             if not fixture_path.exists():
-                self.stderr.write(self.style.ERROR(f"Fixture not found: {fixture_path}"))
-                self.stderr.write(self.style.WARNING("Expected: BASE_DIR/fixtures/<fixture>.json"))
+                self.stderr.write(
+                    self.style.ERROR(f"Fixture not found: {fixture_path}")
+                )
+                self.stderr.write(
+                    self.style.WARNING("Expected: BASE_DIR/fixtures/<fixture>.json")
+                )
                 return
 
-            self.stdout.write(self.style.WARNING(f"Loading fixture: {fixture_path.name}"))
+            self.stdout.write(
+                self.style.WARNING(f"Loading fixture: {fixture_path.name}")
+            )
             try:
                 call_command("loaddata", str(fixture_path))
                 self.stdout.write(self.style.SUCCESS("Fixture loaded ✅"))
             except Exception as e:
                 self.stderr.write(self.style.ERROR(f"loaddata failed: {e}"))
-                self.stderr.write(self.style.WARNING("Tip: run migrations first: python manage.py migrate"))
+                self.stderr.write(
+                    self.style.WARNING(
+                        "Tip: run migrations first: python manage.py migrate"
+                    )
+                )
                 raise
 
         # 2) Seed users / demo helpers
@@ -68,7 +78,9 @@ class Command(BaseCommand):
             if opts["with_test_data"]:
                 cmds.append("create_test_data")
 
-            self.stdout.write(self.style.WARNING("[2/2] Running management commands..."))
+            self.stdout.write(
+                self.style.WARNING("[2/2] Running management commands...")
+            )
             for cmd in cmds:
                 try:
                     self.stdout.write(self.style.WARNING(f"Running: {cmd}"))

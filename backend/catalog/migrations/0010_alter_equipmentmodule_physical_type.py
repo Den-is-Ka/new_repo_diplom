@@ -7,13 +7,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('catalog', '0009_merge_20260215_1636'),
+        ("catalog", "0009_merge_20260215_1636"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='equipmentmodule',
-            name='physical_type',
-            field=models.ForeignKey(blank=True, help_text='Физический тип оборудования (опционально на текущем этапе)', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='modules_by_type', to='catalog.equipmentphysicaltype', verbose_name='Физический тип'),
+            model_name="equipmentmodule",
+            name="physical_type",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Физический тип оборудования (опционально на текущем этапе)",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="modules_by_type",
+                to="catalog.equipmentphysicaltype",
+                verbose_name="Физический тип",
+            ),
         ),
     ]

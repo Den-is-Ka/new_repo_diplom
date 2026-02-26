@@ -1,6 +1,6 @@
 ﻿import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -45,14 +45,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "rest_framework",
     "rest_framework_simplejwt",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
     "whitenoise.runserver_nostatic",
-
     "users",
     "catalog",
     "configurator",
@@ -103,7 +101,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 # -------------------------
 DB_NAME = os.getenv("DB_NAME") or os.getenv("POSTGRES_DB") or "diplom_db"
 DB_USER = os.getenv("DB_USER") or os.getenv("POSTGRES_USER") or "diplom_user"
-DB_PASSWORD = os.getenv("DB_PASSWORD") or os.getenv("POSTGRES_PASSWORD") or "diplom_pass"
+DB_PASSWORD = (
+    os.getenv("DB_PASSWORD") or os.getenv("POSTGRES_PASSWORD") or "diplom_pass"
+)
 DB_HOST = os.getenv("DB_HOST") or os.getenv("POSTGRES_HOST") or "localhost"
 DB_PORT = os.getenv("DB_PORT") or os.getenv("POSTGRES_PORT") or "5432"
 
@@ -122,7 +122,9 @@ DATABASES = {
 # Password validation
 # -------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -215,9 +217,18 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "TAGS": [
         {"name": "auth", "description": "JWT авторизация"},
-        {"name": "catalog", "description": "Каталог: категории, модули, инженерные опции"},
-        {"name": "configurator", "description": "Конфигурации: create/update/validate/set_engineering/submit"},
-        {"name": "orders", "description": "Заказы: list/retrieve/history/status lifecycle"},
+        {
+            "name": "catalog",
+            "description": "Каталог: категории, модули, инженерные опции",
+        },
+        {
+            "name": "configurator",
+            "description": "Конфигурации: create/update/validate/set_engineering/submit",
+        },
+        {
+            "name": "orders",
+            "description": "Заказы: list/retrieve/history/status lifecycle",
+        },
         {"name": "ui", "description": "HTML/UI endpoints (если используются)"},
     ],
 }
@@ -234,7 +245,9 @@ SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 EMAIL_SUBJECT_PREFIX = os.getenv("EMAIL_SUBJECT_PREFIX", "[Diplom] ")
 
 # кому слать уведомление производителю (можно поменять через .env)
-MANUFACTURER_NOTIFY_EMAIL = os.getenv("MANUFACTURER_NOTIFY_EMAIL", "manufacturer@diplom.local")
+MANUFACTURER_NOTIFY_EMAIL = os.getenv(
+    "MANUFACTURER_NOTIFY_EMAIL", "manufacturer@diplom.local"
+)
 
 # 🔧 полезно на будущее, если включишь реальный SMTP (чтобы не зависало)
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))

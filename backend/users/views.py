@@ -1,11 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 User = get_user_model()
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -42,13 +43,18 @@ class RegisterView(APIView):
         except Exception:
             pass
 
-        return Response({"id": u.id, "username": getattr(u, User.USERNAME_FIELD)}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"id": u.id, "username": getattr(u, User.USERNAME_FIELD)},
+            status=status.HTTP_201_CREATED,
+        )
+
 
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 User = get_user_model()
+
 
 class RegisterView(APIView):
     """
@@ -59,6 +65,7 @@ class RegisterView(APIView):
     Создаёт активного пользователя и назначает роль client (если поле role есть),
     либо добавляет в группу client (если используете groups).
     """
+
     permission_classes = [AllowAny]
     authentication_classes = []  # важно: чтобы не упереться в SessionAuth/CSRF
 
@@ -68,12 +75,18 @@ class RegisterView(APIView):
         email = (request.data.get("email") or "").strip()
 
         if not username or not password:
-            return Response({"detail": "username и password обязательны"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "username и password обязательны"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Если username-field у кастомного пользователя другой — используем USERNAME_FIELD
         username_field = User.USERNAME_FIELD
         if User.objects.filter(**{username_field: username}).exists():
-            return Response({"detail": "Пользователь уже существует"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Пользователь уже существует"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         u = User(**{username_field: username})
 

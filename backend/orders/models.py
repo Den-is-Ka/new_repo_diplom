@@ -20,7 +20,7 @@ ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
     OrderStatus.IN_REVIEW: {OrderStatus.APPROVED, OrderStatus.REJECTED},
     OrderStatus.APPROVED: {OrderStatus.IN_PRODUCTION},
     OrderStatus.IN_PRODUCTION: {OrderStatus.COMPLETED},
-    OrderStatus.REJECTED: set(),   # терминальный
+    OrderStatus.REJECTED: set(),  # терминальный
     OrderStatus.COMPLETED: set(),  # терминальный
 }
 
@@ -66,8 +66,12 @@ class Order(models.Model):
     snapshot = models.JSONField(default=dict, blank=True)
 
     # бизнес-фиксация дат статусов
-    quoted_at = models.DateTimeField(null=True, blank=True)     # когда заказ согласован (APPROVED)
-    completed_at = models.DateTimeField(null=True, blank=True)  # когда заказ завершён (COMPLETED)
+    quoted_at = models.DateTimeField(
+        null=True, blank=True
+    )  # когда заказ согласован (APPROVED)
+    completed_at = models.DateTimeField(
+        null=True, blank=True
+    )  # когда заказ завершён (COMPLETED)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -114,7 +118,9 @@ class Order(models.Model):
             return
 
         if not self.can_transition_to(new_status):
-            raise ValueError(f"Invalid status transition: {self.status} -> {new_status}")
+            raise ValueError(
+                f"Invalid status transition: {self.status} -> {new_status}"
+            )
 
         now = timezone.now()
         if new_status == OrderStatus.APPROVED and self.quoted_at is None:
@@ -149,7 +155,7 @@ class OrderStatusHistory(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["order", "created_at"]),   # важно для /history/
+            models.Index(fields=["order", "created_at"]),  # важно для /history/
             models.Index(fields=["to_status"]),
             models.Index(fields=["created_at"]),
         ]

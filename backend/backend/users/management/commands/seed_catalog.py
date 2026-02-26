@@ -3,8 +3,8 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from catalog.constants import CATALOG_TZ
 from catalog import models as catalog_models
+from catalog.constants import CATALOG_TZ
 
 
 def _has_field(model, field_name: str) -> bool:
@@ -66,7 +66,12 @@ class Command(BaseCommand):
         group_name_field = _pick_field(EngineeringSystemGroup, ["name", "title"])
         option_name_field = _pick_field(EngineeringSystemOption, ["name", "title"])
 
-        if not category_name_field or not module_name_field or not group_name_field or not option_name_field:
+        if (
+            not category_name_field
+            or not module_name_field
+            or not group_name_field
+            or not option_name_field
+        ):
             raise CommandError(
                 "Не смог определить поля name/title в моделях. "
                 "Проверьте модели EquipmentCategory/EquipmentModule/EngineeringSystemGroup/EngineeringSystemOption."
@@ -75,34 +80,51 @@ class Command(BaseCommand):
         # Флаг “мультивыбора” у группы может называться по-разному
         group_multi_field = _pick_field(
             EngineeringSystemGroup,
-            ["is_multi", "is_multiple", "multiple", "allow_multiple", "multi_select", "is_multiselect"],
+            [
+                "is_multi",
+                "is_multiple",
+                "multiple",
+                "allow_multiple",
+                "multi_select",
+                "is_multiselect",
+            ],
         )
 
         if clear:
             self.stdout.write(self.style.WARNING("Clearing existing catalog data..."))
             self._clear_catalog()
 
-        self.stdout.write(self.style.MIGRATE_HEADING("Seeding equipment categories/modules..."))
+        self.stdout.write(
+            self.style.MIGRATE_HEADING("Seeding equipment categories/modules...")
+        )
 
         # Ожидаем формат:
         # CATALOG_TZ["equipment"] = { "<категория/тип>": ["<модуль1>", "<модуль2>", ...], ... }
         equipment_block = CATALOG_TZ.get("equipment")
         if not isinstance(equipment_block, dict):
-            raise CommandError("CATALOG_TZ['equipment'] должен быть dict вида {category_name: [module_names...] }")
+            raise CommandError(
+                "CATALOG_TZ['equipment'] должен быть dict вида {category_name: [module_names...] }"
+            )
 
         for category_name, modules in equipment_block.items():
             if not isinstance(modules, (list, tuple)):
-                raise CommandError(f"CATALOG_TZ['equipment']['{category_name}'] должен быть списком модулей")
+                raise CommandError(
+                    f"CATALOG_TZ['equipment']['{category_name}'] должен быть списком модулей"
+                )
 
             # Создаём категорию
-            category, _ = EquipmentCategory.objects.get_or_create(**{category_name_field: category_name})
+            category, _ = EquipmentCategory.objects.get_or_create(
+                **{category_name_field: category_name}
+            )
 
             # Если в EquipmentCategory есть поле equipment_type — удобно продублировать туда имя “типа”
             # (у тебя оно есть, и это ок)
             _set_if_exists(category, equipment_type=category_name, is_active=True)
 
             # Полезно иметь code (если поле есть) — делаем простой slug-like код
-            if _has_field(EquipmentCategory, "code") and not getattr(category, "code", None):
+            if _has_field(EquipmentCategory, "code") and not getattr(
+                category, "code", None
+            ):
                 code = (
                     str(category_name)
                     .strip()
@@ -126,14 +148,20 @@ class Command(BaseCommand):
                 _set_if_exists(mod, price=0, is_active=True)
                 mod.save()
 
-        self.stdout.write(self.style.MIGRATE_HEADING("Seeding engineering groups/options..."))
+        self.stdout.write(
+            self.style.MIGRATE_HEADING("Seeding engineering groups/options...")
+        )
 
         engineering_block = CATALOG_TZ.get("engineering_groups")
         if not isinstance(engineering_block, dict):
-            raise CommandError("CATALOG_TZ['engineering_groups'] должен быть dict вида {group_name: {multi:bool, options:[...]}}")
+            raise CommandError(
+                "CATALOG_TZ['engineering_groups'] должен быть dict вида {group_name: {multi:bool, options:[...]}}"
+            )
 
         for group_name, meta in engineering_block.items():
-            group, _ = EngineeringSystemGroup.objects.get_or_create(**{group_name_field: group_name})
+            group, _ = EngineeringSystemGroup.objects.get_or_create(
+                **{group_name_field: group_name}
+            )
 
             if group_multi_field:
                 setattr(group, group_multi_field, bool(meta.get("multi", False)))
@@ -141,7 +169,9 @@ class Command(BaseCommand):
 
             options_list = meta.get("options", [])
             if not isinstance(options_list, (list, tuple)):
-                raise CommandError(f"engineering_groups['{group_name}']['options'] должен быть списком")
+                raise CommandError(
+                    f"engineering_groups['{group_name}']['options'] должен быть списком"
+                )
 
             for opt_name in options_list:
                 EngineeringSystemOption.objects.get_or_create(

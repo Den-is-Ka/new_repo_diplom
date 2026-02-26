@@ -1,14 +1,13 @@
-import pytest
 from decimal import Decimal
 
-from django.core import mail
+import pytest
 from django.contrib.auth import get_user_model
+from django.core import mail
 
-from orders.models import Order
-from configurator.models import Configuration
 from catalog.models import EquipmentCategory
-
+from configurator.models import Configuration
 from notifications.email_service import send_order_created_emails
+from orders.models import Order
 
 User = get_user_model()
 

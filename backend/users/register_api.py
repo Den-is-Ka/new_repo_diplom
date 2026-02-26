@@ -2,10 +2,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db import IntegrityError
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
 
 User = get_user_model()
 
@@ -17,8 +17,14 @@ def _pick_enterprise_field_name(user_obj) -> str | None:
     """
     # частые варианты имён поля
     candidates = [
-        "company_name", "enterprise_name", "organization_name", "organisation_name",
-        "company", "enterprise", "organization", "organisation",
+        "company_name",
+        "enterprise_name",
+        "organization_name",
+        "organisation_name",
+        "company",
+        "enterprise",
+        "organization",
+        "organisation",
     ]
     for name in candidates:
         if hasattr(user_obj, name):
@@ -45,7 +51,12 @@ def _default_value_for_required_field(field, username: str, email: str):
         return username
     if internal == "EmailField":
         return email or f"{username}@example.com"
-    if internal in ("IntegerField", "BigIntegerField", "SmallIntegerField", "PositiveIntegerField"):
+    if internal in (
+        "IntegerField",
+        "BigIntegerField",
+        "SmallIntegerField",
+        "PositiveIntegerField",
+    ):
         return 0
     if internal == "BooleanField":
         return False
@@ -63,6 +74,7 @@ class RegisterView(APIView):
 
     Делает активного пользователя + пытается назначить роль client.
     """
+
     permission_classes = [AllowAny]
     authentication_classes = []  # без SessionAuth/CSRF
 
@@ -80,7 +92,10 @@ class RegisterView(APIView):
             ).strip()
 
             if not username_in or not password:
-                return Response({"detail": "username и password обязательны"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"detail": "username и password обязательны"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             # дефолт, чтобы никогда не падать на пустом предприятии
             if not company_name:
@@ -98,7 +113,10 @@ class RegisterView(APIView):
 
             # дубль?
             if User.objects.filter(**{username_field: username_value}).exists():
-                return Response({"detail": "Пользователь уже существует"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"detail": "Пользователь уже существует"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             # ✅ ВАЖНО: создаём вручную (НЕ через create_user), чтобы обойти валидации менеджера
             u = User(**{username_field: username_value})
@@ -114,8 +132,14 @@ class RegisterView(APIView):
 
             # подстраховка: обязательные NOT NULL поля без default
             skip = {
-                "id", "password", "last_login", "is_superuser", "is_staff", "is_active",
-                "date_joined", username_field,
+                "id",
+                "password",
+                "last_login",
+                "is_superuser",
+                "is_staff",
+                "is_active",
+                "date_joined",
+                username_field,
             }
             for f in u._meta.fields:
                 if f.name in skip:
@@ -155,9 +179,17 @@ class RegisterView(APIView):
             except Exception:
                 pass
 
-            return Response({"id": u.id, "username": username_value}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"id": u.id, "username": username_value}, status=status.HTTP_201_CREATED
+            )
 
         except IntegrityError as e:
-            return Response({"detail": f"IntegrityError: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": f"IntegrityError: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
-            return Response({"detail": f"{type(e).__name__}: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": f"{type(e).__name__}: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

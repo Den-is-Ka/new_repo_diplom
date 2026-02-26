@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('configurator', '0002_alter_configuration_sub_category'),
+        ("configurator", "0002_alter_configuration_sub_category"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='configuration',
-            name='submitted_at',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='Дата отправки'),
+            model_name="configuration",
+            name="submitted_at",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="Дата отправки"
+            ),
         ),
     ]

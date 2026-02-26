@@ -6,18 +6,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0003_orderstatushistory_order_manager_alter_order_status_and_more'),
+        ("orders", "0003_orderstatushistory_order_manager_alter_order_status_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='orderstatushistory',
-            name='from_status',
-            field=models.CharField(choices=[('NEW', 'New'), ('IN_REVIEW', 'In review'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'), ('IN_PRODUCTION', 'In production'), ('COMPLETED', 'Completed')], max_length=16),
+            model_name="orderstatushistory",
+            name="from_status",
+            field=models.CharField(
+                choices=[
+                    ("NEW", "New"),
+                    ("IN_REVIEW", "In review"),
+                    ("APPROVED", "Approved"),
+                    ("REJECTED", "Rejected"),
+                    ("IN_PRODUCTION", "In production"),
+                    ("COMPLETED", "Completed"),
+                ],
+                max_length=16,
+            ),
         ),
         migrations.AlterField(
-            model_name='orderstatushistory',
-            name='to_status',
-            field=models.CharField(choices=[('NEW', 'New'), ('IN_REVIEW', 'In review'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'), ('IN_PRODUCTION', 'In production'), ('COMPLETED', 'Completed')], max_length=16),
+            model_name="orderstatushistory",
+            name="to_status",
+            field=models.CharField(
+                choices=[
+                    ("NEW", "New"),
+                    ("IN_REVIEW", "In review"),
+                    ("APPROVED", "Approved"),
+                    ("REJECTED", "Rejected"),
+                    ("IN_PRODUCTION", "In production"),
+                    ("COMPLETED", "Completed"),
+                ],
+                max_length=16,
+            ),
         ),
     ]

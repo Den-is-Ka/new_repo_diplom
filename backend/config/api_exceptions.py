@@ -30,7 +30,9 @@ def _normalize_django_validation_error(exc: DjangoValidationError) -> Dict[str, 
     return {"detail": str(exc)}
 
 
-def custom_exception_handler(exc: Exception, context: Optional[dict] = None) -> Response:
+def custom_exception_handler(
+    exc: Exception, context: Optional[dict] = None
+) -> Response:
     """
     1) Сначала даём DRF обработать стандартные исключения
     2) Если DRF не обработал и это DjangoValidationError — возвращаем 400 JSON

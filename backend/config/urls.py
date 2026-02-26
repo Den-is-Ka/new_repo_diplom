@@ -1,11 +1,17 @@
-﻿from django.http import HttpResponse
-from django.contrib import admin
-from django.urls import path, include
+﻿from django.contrib import admin
+from django.http import HttpResponse
+from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 urlpatterns = [
-    path('', lambda request: HttpResponse('''
+    path(
+        "",
+        lambda request: HttpResponse("""
         <html>
         <head><title>Diplom Container Configurator</title></head>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
@@ -22,18 +28,22 @@ urlpatterns = [
             </ul>
         </body>
         </html>
-    ''')),
-
-    path('admin/', admin.site.urls),
-    path('api/catalog/', include('catalog.urls')),
-    path('api/users/', include('users.urls')),
-    path('api/configurator/', include('configurator.urls')),
-    path('api/auth/', include('rest_framework.urls')),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    """),
+    ),
+    path("admin/", admin.site.urls),
+    path("api/catalog/", include("catalog.urls")),
+    path("api/users/", include("users.urls")),
+    path("api/configurator/", include("configurator.urls")),
+    path("api/auth/", include("rest_framework.urls")),
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/orders/", include("orders.urls")),
     path("ui/", include("ui.urls")),
     path("favicon.ico", lambda request: HttpResponse(status=204)),

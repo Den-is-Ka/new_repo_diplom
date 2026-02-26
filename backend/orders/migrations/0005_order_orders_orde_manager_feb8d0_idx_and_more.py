@@ -7,26 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('configurator', '0003_configuration_submitted_at'),
-        ('orders', '0004_alter_orderstatushistory_from_status_and_more'),
+        ("configurator", "0003_configuration_submitted_at"),
+        ("orders", "0004_alter_orderstatushistory_from_status_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='order',
-            index=models.Index(fields=['manager', 'status'], name='orders_orde_manager_feb8d0_idx'),
+            model_name="order",
+            index=models.Index(
+                fields=["manager", "status"], name="orders_orde_manager_feb8d0_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='order',
-            index=models.Index(fields=['user', 'status'], name='orders_orde_user_id_02a211_idx'),
+            model_name="order",
+            index=models.Index(
+                fields=["user", "status"], name="orders_orde_user_id_02a211_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='orderstatushistory',
-            index=models.Index(fields=['order', 'created_at'], name='orders_orde_order_i_1de1d7_idx'),
+            model_name="orderstatushistory",
+            index=models.Index(
+                fields=["order", "created_at"], name="orders_orde_order_i_1de1d7_idx"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='order',
-            constraint=models.UniqueConstraint(condition=models.Q(('configuration__isnull', False)), fields=('configuration',), name='uniq_order_configuration_not_null'),
+            model_name="order",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("configuration__isnull", False)),
+                fields=("configuration",),
+                name="uniq_order_configuration_not_null",
+            ),
         ),
     ]

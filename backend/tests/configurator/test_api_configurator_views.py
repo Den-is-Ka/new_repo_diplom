@@ -1,14 +1,14 @@
-import pytest
 from decimal import Decimal
 
+import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from catalog.models import (
-    EquipmentCategory,
-    EquipmentModule,
     EngineeringSystemGroup,
     EngineeringSystemOption,
+    EquipmentCategory,
+    EquipmentModule,
 )
 from configurator.models import Configuration
 
@@ -115,11 +115,15 @@ def test_configurator_api_happy_path_and_lock():
     assert r.status_code == 400
 
     # --- sub_categories: invalid id ---
-    r = api.get("/api/configurator/configurations/sub_categories/?main_category_id=999999")
+    r = api.get(
+        "/api/configurator/configurations/sub_categories/?main_category_id=999999"
+    )
     assert r.status_code == 404
 
     # --- sub_categories: ok ---
-    r = api.get(f"/api/configurator/configurations/sub_categories/?main_category_id={main.id}")
+    r = api.get(
+        f"/api/configurator/configurations/sub_categories/?main_category_id={main.id}"
+    )
     assert r.status_code == 200
     data = r.json()
     assert any(x["id"] == sub.id for x in data)
@@ -129,7 +133,9 @@ def test_configurator_api_happy_path_and_lock():
     assert r.status_code == 400
 
     # --- available_modules: ok ---
-    r = api.get(f"/api/configurator/configurations/available_modules/?category_id={sub.id}")
+    r = api.get(
+        f"/api/configurator/configurations/available_modules/?category_id={sub.id}"
+    )
     assert r.status_code == 200
     data = r.json()
     assert any(x["id"] == m1.id for x in data)
@@ -166,14 +172,18 @@ def test_configurator_api_happy_path_and_lock():
     assert Decimal(v["total_price"]) == Decimal("121000.00")  # 120000 + 1000
 
     # --- submit (created True) ---
-    r = api.post(f"/api/configurator/configurations/{cfg_id}/submit/", data={}, format="json")
+    r = api.post(
+        f"/api/configurator/configurations/{cfg_id}/submit/", data={}, format="json"
+    )
     assert r.status_code in (200, 201)
     s1 = r.json()
     assert s1["created"] is True
     assert "order_id" in s1
 
     # --- submit again (created False) ---
-    r = api.post(f"/api/configurator/configurations/{cfg_id}/submit/", data={}, format="json")
+    r = api.post(
+        f"/api/configurator/configurations/{cfg_id}/submit/", data={}, format="json"
+    )
     assert r.status_code == 200
     s2 = r.json()
     assert s2["created"] is False

@@ -1,21 +1,19 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
-from users.roles import is_manufacturer
-
+from catalog.models import EngineeringSystemOption, EquipmentCategory, EquipmentModule
 from configurator.models import Configuration, ConfigurationEngineeringSystem
 from configurator.serializers import (
-    ConfigurationSerializer,
     ConfigurationCreateSerializer,
-    ConfigurationValidateSerializer,
+    ConfigurationSerializer,
     ConfigurationSetEngineeringSerializer,
+    ConfigurationValidateSerializer,
 )
 from configurator.services import validate_configuration_for_submit
-
-from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
 from orders.services import submit_configuration
+from users.roles import is_manufacturer
 
 
 def _role_str(user) -> str:
@@ -29,8 +27,7 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Configuration.objects
-            .all()
+            Configuration.objects.all()
             .select_related("user", "main_category", "sub_category")
             .prefetch_related("modules")
         )
@@ -73,7 +70,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
 
-    def _response_full_cfg(self, cfg: Configuration, http_status=status.HTTP_200_OK) -> Response:
+    def _response_full_cfg(
+        self, cfg: Configuration, http_status=status.HTTP_200_OK
+    ) -> Response:
         data = ConfigurationSerializer(cfg, context={"request": self.request}).data
         return Response(data, status=http_status)
 
@@ -95,7 +94,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         if locked:
             return locked
 
-        ser = self.get_serializer(instance, data=request.data, partial=False, context={"request": request})
+        ser = self.get_serializer(
+            instance, data=request.data, partial=False, context={"request": request}
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
 
@@ -110,7 +111,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         if locked:
             return locked
 
-        ser = self.get_serializer(instance, data=request.data, partial=True, context={"request": request})
+        ser = self.get_serializer(
+            instance, data=request.data, partial=True, context={"request": request}
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
 
@@ -204,7 +207,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                 {
                     "id": c.id,
                     "name": c.name,
-                    "parent_name": c.parent.name if getattr(c, "parent_id", None) else "-",
+                    "parent_name": (
+                        c.parent.name if getattr(c, "parent_id", None) else "-"
+                    ),
                     "equipment_type": getattr(c, "equipment_type", ""),
                     "description": getattr(c, "description", "") or "",
                     "is_active": getattr(c, "is_active", True),
@@ -247,7 +252,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                     "code": getattr(sub, "code", ""),
                     "description": getattr(sub, "description", "") or "",
                     "is_active": getattr(sub, "is_active", True),
-                    "parent_name": sub.parent.name if getattr(sub, "parent_id", None) else "-",
+                    "parent_name": (
+                        sub.parent.name if getattr(sub, "parent_id", None) else "-"
+                    ),
                 }
             )
         return Response(data)
@@ -286,7 +293,9 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                     "price": str(module.price) if module.price else None,
                     "price_type": module.price_type,
                     "display_price": getattr(module, "display_price", ""),
-                    "physical_type": module.physical_type.name if module.physical_type else "",
+                    "physical_type": (
+                        module.physical_type.name if module.physical_type else ""
+                    ),
                     "applicable_to": getattr(module, "applicable_to", ""),
                 }
             )
@@ -306,9 +315,13 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         ser.is_valid(raise_exception=True)
         ids = ser.validated_data["engineering_option_ids"]
 
-        ConfigurationEngineeringSystem.objects.filter(configuration=configuration).delete()
+        ConfigurationEngineeringSystem.objects.filter(
+            configuration=configuration
+        ).delete()
 
-        opts = EngineeringSystemOption.objects.filter(id__in=ids, is_active=True).select_related("group")
+        opts = EngineeringSystemOption.objects.filter(
+            id__in=ids, is_active=True
+        ).select_related("group")
         by_id = {o.id: o for o in opts}
 
         for oid in ids:

@@ -22,7 +22,10 @@ def test_register_success_and_token(api_client):
 
     # token obtain
     username_field = User.USERNAME_FIELD
-    token_payload = {username_field: getattr(u, username_field), "password": "StrongPass123"}
+    token_payload = {
+        username_field: getattr(u, username_field),
+        "password": "StrongPass123",
+    }
     r = api_client.post("/api/token/", data=token_payload, format="json")
     assert r.status_code == 200, r.content
     t = r.json()
@@ -40,7 +43,12 @@ def test_register_duplicate_username_returns_400_or_409(api_client):
 
     r = api_client.post(
         "/api/users/register/",
-        data={"username": "dup_user", "password": "pass123", "email": "dup2@example.com", "company_name": "ООО Dup2"},
+        data={
+            "username": "dup_user",
+            "password": "pass123",
+            "email": "dup2@example.com",
+            "company_name": "ООО Dup2",
+        },
         format="json",
     )
     # в зависимости от реализации может быть 400 или 409
@@ -55,7 +63,12 @@ def test_register_empty_company_name_is_auto_filled(api_client):
     """
     r = api_client.post(
         "/api/users/register/",
-        data={"username": "u_no_company", "password": "qwer-1234", "email": "a@a.ru", "company_name": ""},
+        data={
+            "username": "u_no_company",
+            "password": "qwer-1234",
+            "email": "a@a.ru",
+            "company_name": "",
+        },
         format="json",
     )
     assert r.status_code in (200, 201), r.content

@@ -1,5 +1,7 @@
 ﻿from django.core.management.base import BaseCommand
+
 from users.services.demo_seed import seed_demo_users
+
 
 class Command(BaseCommand):
     help = "Create demo users and demo data"

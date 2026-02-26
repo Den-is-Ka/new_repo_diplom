@@ -95,7 +95,10 @@ def seed_demo_users(stdout=None) -> int:
 
         if was_created:
             created_count += 1
-            _out(stdout, f"✅ Создан: {user.username} ({getattr(user, 'company_name', '')})")
+            _out(
+                stdout,
+                f"✅ Создан: {user.username} ({getattr(user, 'company_name', '')})",
+            )
         else:
             _out(stdout, f"⚠️ Уже существует: {email} — обновил данные/пароль")
 

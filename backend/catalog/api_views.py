@@ -1,5 +1,6 @@
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from catalog.models import EquipmentCategory
 
 
@@ -7,8 +8,7 @@ class EquipmentTypesView(APIView):
     def get(self, request):
         # Берём уникальные equipment_type из БД
         types = (
-            EquipmentCategory.objects
-            .exclude(equipment_type__isnull=True)
+            EquipmentCategory.objects.exclude(equipment_type__isnull=True)
             .exclude(equipment_type__exact="")
             .values_list("equipment_type", flat=True)
             .distinct()

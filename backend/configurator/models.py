@@ -95,7 +95,9 @@ class Configuration(models.Model):
         blank=True,
     )
 
-    company_name = models.CharField(_("Название предприятия"), max_length=200, blank=True)
+    company_name = models.CharField(
+        _("Название предприятия"), max_length=200, blank=True
+    )
     phone = models.CharField(_("Телефон"), max_length=20, blank=True)
     email = models.EmailField(_("Email"), blank=True)
 
@@ -181,14 +183,21 @@ class Configuration(models.Model):
 
             if changed:
                 raise ValidationError(
-                    {"detail": _("Configuration is locked after submit."), "fields": changed}
+                    {
+                        "detail": _("Configuration is locked after submit."),
+                        "fields": changed,
+                    }
                 )
 
     def save(self, *args, **kwargs):
         # 0) определяем старый статус (для lock + фиксации submit transition)
         old_status = None
         if self.pk:
-            old_status = Configuration.objects.filter(pk=self.pk).values_list("status", flat=True).first()
+            old_status = (
+                Configuration.objects.filter(pk=self.pk)
+                .values_list("status", flat=True)
+                .first()
+            )
 
         # 1) запрет редактирования бизнес-полей, если раньше был НЕ DRAFT
         self._validate_locked_update(old_status)
@@ -211,7 +220,9 @@ class Configuration(models.Model):
             super().save(update_fields=["total_price", "updated_at"])
 
         # 5) при ПЕРЕХОДЕ в SUBMITTED — фиксируем submitted_at и order_number
-        transitioned_to_submitted = (old_status != self.Status.SUBMITTED) and (self.status == self.Status.SUBMITTED)
+        transitioned_to_submitted = (old_status != self.Status.SUBMITTED) and (
+            self.status == self.Status.SUBMITTED
+        )
         if transitioned_to_submitted:
             if self.submitted_at is None:
                 self.submitted_at = timezone.now()
@@ -247,7 +258,9 @@ class ConfigurationModule(models.Model):
         verbose_name = _("Выбранный модуль")
         verbose_name_plural = _("Выбранные модули")
         constraints = [
-            models.UniqueConstraint(fields=["configuration", "module"], name="uniq_config_module")
+            models.UniqueConstraint(
+                fields=["configuration", "module"], name="uniq_config_module"
+            )
         ]
 
     def __str__(self):
@@ -323,7 +336,10 @@ class ConfigurationEngineeringSystem(models.Model):
                 raise ValidationError(_("Configuration is locked after submit."))
 
         # фикс “цена на момент выбора”: не сохраняем None для fixed
-        if self.price_at_selection is None and self.engineering_system.price_type == "fixed":
+        if (
+            self.price_at_selection is None
+            and self.engineering_system.price_type == "fixed"
+        ):
             self.price_at_selection = self.engineering_system.price or Decimal("0.00")
 
         return super().save(*args, **kwargs)

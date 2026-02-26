@@ -7,13 +7,13 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from catalog.models import (
-    EquipmentCategory,
-    EquipmentPhysicalType,
-    EquipmentModule,
     CompatibilityRule,
     ContainerConfiguration,
     EngineeringSystemGroup,
     EngineeringSystemOption,
+    EquipmentCategory,
+    EquipmentModule,
+    EquipmentPhysicalType,
 )
 
 
@@ -38,7 +38,9 @@ class Command(BaseCommand):
         # -------------------------
         pt_dgu = _uoc(EquipmentPhysicalType, {"name": "ДГУ (генератор)"}, {})
         pt_comp = _uoc(EquipmentPhysicalType, {"name": "Компрессор"}, {})
-        pt_common = _uoc(EquipmentPhysicalType, {"name": "Общее (контейнер/системы)"}, {})
+        pt_common = _uoc(
+            EquipmentPhysicalType, {"name": "Общее (контейнер/системы)"}, {}
+        )
 
         # если есть is_active — включим
         for pt in (pt_dgu, pt_comp, pt_common):
@@ -93,33 +95,75 @@ class Command(BaseCommand):
         dgu_50 = _uoc(
             EquipmentCategory,
             {"code": "DGU50"},
-            {"name": "ДГУ до 50 кВт", "parent": dgu, "equipment_type": "dgu", "description": "Малые мощности", "order": 11, "is_active": True},
+            {
+                "name": "ДГУ до 50 кВт",
+                "parent": dgu,
+                "equipment_type": "dgu",
+                "description": "Малые мощности",
+                "order": 11,
+                "is_active": True,
+            },
         )
         dgu_200 = _uoc(
             EquipmentCategory,
             {"code": "DGU200"},
-            {"name": "ДГУ 50–200 кВт", "parent": dgu, "equipment_type": "dgu", "description": "Средние мощности", "order": 12, "is_active": True},
+            {
+                "name": "ДГУ 50–200 кВт",
+                "parent": dgu,
+                "equipment_type": "dgu",
+                "description": "Средние мощности",
+                "order": 12,
+                "is_active": True,
+            },
         )
         dgu_500 = _uoc(
             EquipmentCategory,
             {"code": "DGU500"},
-            {"name": "ДГУ 200–500 кВт", "parent": dgu, "equipment_type": "dgu", "description": "Высокие мощности", "order": 13, "is_active": True},
+            {
+                "name": "ДГУ 200–500 кВт",
+                "parent": dgu,
+                "equipment_type": "dgu",
+                "description": "Высокие мощности",
+                "order": 13,
+                "is_active": True,
+            },
         )
 
         comp_10 = _uoc(
             EquipmentCategory,
             {"code": "C10"},
-            {"name": "Компрессор до 10 бар", "parent": comp, "equipment_type": "compressor", "description": "Низкое давление", "order": 21, "is_active": True},
+            {
+                "name": "Компрессор до 10 бар",
+                "parent": comp,
+                "equipment_type": "compressor",
+                "description": "Низкое давление",
+                "order": 21,
+                "is_active": True,
+            },
         )
         comp_30 = _uoc(
             EquipmentCategory,
             {"code": "C30"},
-            {"name": "Компрессор 10–30 бар", "parent": comp, "equipment_type": "compressor", "description": "Среднее давление", "order": 22, "is_active": True},
+            {
+                "name": "Компрессор 10–30 бар",
+                "parent": comp,
+                "equipment_type": "compressor",
+                "description": "Среднее давление",
+                "order": 22,
+                "is_active": True,
+            },
         )
         comp_60 = _uoc(
             EquipmentCategory,
             {"code": "C60"},
-            {"name": "Компрессор 30–60 бар", "parent": comp, "equipment_type": "compressor", "description": "Высокое давление", "order": 23, "is_active": True},
+            {
+                "name": "Компрессор 30–60 бар",
+                "parent": comp,
+                "equipment_type": "compressor",
+                "description": "Высокое давление",
+                "order": 23,
+                "is_active": True,
+            },
         )
 
         self.stdout.write(self.style.SUCCESS("✅ EquipmentCategory seeded"))
@@ -141,7 +185,12 @@ class Command(BaseCommand):
         g_security = _uoc(
             EngineeringSystemGroup,
             {"code": "SEC"},
-            {"title": "Безопасность", "key": "security", "order": 30, "is_active": True},
+            {
+                "title": "Безопасность",
+                "key": "security",
+                "order": 30,
+                "is_active": True,
+            },
         )
 
         # applicability: оставляем "all" (если choices другие — кинет ValidationError, тогда поправим под твои choices)
@@ -196,7 +245,14 @@ class Command(BaseCommand):
 
         # общие
         _mod("Шумоизоляция контейнера", dgu_50, pt_common, "all", "250000.00")
-        _mod("Освещение промышленное", dgu_50, pt_common, "all", "45000.00", is_default=True)
+        _mod(
+            "Освещение промышленное",
+            dgu_50,
+            pt_common,
+            "all",
+            "45000.00",
+            is_default=True,
+        )
         _mod("Охранная сигнализация", dgu_50, pt_common, "all", "60000.00")
         _mod("Транспортные салазки", dgu_50, pt_common, "all", "90000.00")
 
@@ -207,7 +263,14 @@ class Command(BaseCommand):
         _mod("Топливный бак увеличенный", dgu_500, pt_dgu, "dgu", "190000.00")
 
         # Компрессор
-        _mod("Система маслоотделения", comp_10, pt_comp, "compressor", "175000.00", is_default=True)
+        _mod(
+            "Система маслоотделения",
+            comp_10,
+            pt_comp,
+            "compressor",
+            "175000.00",
+            is_default=True,
+        )
         _mod("Осушитель воздуха", comp_30, pt_comp, "compressor", "145000.00")
         _mod("Фильтр тонкой очистки", comp_10, pt_comp, "compressor", "65000.00")
         _mod("Ресивер 500л", comp_30, pt_comp, "compressor", "98000.00")
@@ -222,7 +285,11 @@ class Command(BaseCommand):
         fields = {f.name for f in CompatibilityRule._meta.fields}
 
         def _rule(code, title, payload):
-            lookup = {"code": code} if "code" in fields else {"title": title} if "title" in fields else {"name": title}
+            lookup = (
+                {"code": code}
+                if "code" in fields
+                else {"title": title} if "title" in fields else {"name": title}
+            )
             defaults = {}
             if "title" in fields:
                 defaults["title"] = title
@@ -240,9 +307,21 @@ class Command(BaseCommand):
                 defaults["data"] = payload
             _uoc(CompatibilityRule, lookup, defaults)
 
-        _rule("REQBLK", "Обязательные блоки: электрика + климат", {"type": "required_groups", "groups": ["electric", "climate"]})
-        _rule("DGUONLY", "DGU-модули только для ДГУ", {"type": "module_applicable_to", "allowed": ["dgu"]})
-        _rule("COMPONLY", "Компрессор-модули только для компрессора", {"type": "module_applicable_to", "allowed": ["compressor"]})
+        _rule(
+            "REQBLK",
+            "Обязательные блоки: электрика + климат",
+            {"type": "required_groups", "groups": ["electric", "climate"]},
+        )
+        _rule(
+            "DGUONLY",
+            "DGU-модули только для ДГУ",
+            {"type": "module_applicable_to", "allowed": ["dgu"]},
+        )
+        _rule(
+            "COMPONLY",
+            "Компрессор-модули только для компрессора",
+            {"type": "module_applicable_to", "allowed": ["compressor"]},
+        )
 
         self.stdout.write(self.style.SUCCESS("✅ CompatibilityRule seeded (minimal)"))
 
@@ -277,8 +356,16 @@ class Command(BaseCommand):
 
             _uoc(ContainerConfiguration, lookup, defaults)
 
-        _cc("Контейнер 20ft (стандарт)", {"size": "20ft", "insulation": "standard", "doors": 1})
-        _cc("Контейнер 40ft (усиленный)", {"size": "40ft", "insulation": "high", "doors": 2})
+        _cc(
+            "Контейнер 20ft (стандарт)",
+            {"size": "20ft", "insulation": "standard", "doors": 1},
+        )
+        _cc(
+            "Контейнер 40ft (усиленный)",
+            {"size": "40ft", "insulation": "high", "doors": 2},
+        )
 
-        self.stdout.write(self.style.SUCCESS("✅ ContainerConfiguration seeded (minimal)"))
+        self.stdout.write(
+            self.style.SUCCESS("✅ ContainerConfiguration seeded (minimal)")
+        )
         self.stdout.write(self.style.SUCCESS("🎉 Seed done. You can re-run safely."))
