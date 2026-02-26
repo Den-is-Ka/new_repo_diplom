@@ -1,6 +1,6 @@
 ﻿from django.urls import path, include
 from rest_framework import routers
-
+from .api_views import EquipmentTypesView, EngineeringSystemsView
 from .api import (
     EquipmentCategoryViewSet,
     EquipmentPhysicalTypeViewSet,
@@ -24,4 +24,9 @@ router.register(r'engineering-system-options', EngineeringSystemOptionViewSet, b
 
 urlpatterns = [
     path('', include(router.urls)),
+    path("equipment-types/", EquipmentTypesView.as_view(), name="equipment-types"),
+    path("engineering_systems/", EngineeringSystemsView.as_view(), name="engineering_systems"),
+    path("engineering-systems/", EngineeringSystemsView.as_view(), name="engineering-systems"),
+    path("engineering/", EngineeringSystemsView.as_view(), name="engineering"),
+    path("engineeringsystems/", EngineeringSystemsView.as_view(), name="engineeringsystems"),
 ]

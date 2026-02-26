@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
-from users.roles import is_admin, is_manufacturer  # ✅ добавили роли
+from users.roles import is_manufacturer
 
 from configurator.models import Configuration, ConfigurationEngineeringSystem
 from configurator.serializers import (
@@ -13,47 +13,115 @@ from configurator.serializers import (
     ConfigurationSetEngineeringSerializer,
 )
 from configurator.services import validate_configuration_for_submit
-from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
 
+from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
 from orders.services import submit_configuration
 
 
-class ConfigurationViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet для работы с конфигурациями.
+def _role_str(user) -> str:
+    role = getattr(user, "role", None) or getattr(user, "user_type", None)
+    return str(role).lower() if role is not None else ""
 
-    День 1 (P0): Права и фильтрация
-    - admin: видит все конфигурации
-    - manufacturer: конфигурации не видит
-    - client: видит только свои
-    """
+
+class ConfigurationViewSet(viewsets.ModelViewSet):
     queryset = Configuration.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Возвращаем только конфигурации текущего пользователя (надёжно по user_id)."""
-        user_id = getattr(getattr(self.request, "user", None), "id", None)
-        if not user_id:
-            return Configuration.objects.none()
-        return Configuration.objects.filter(user_id=user_id)
+        qs = (
+            Configuration.objects
+            .all()
+            .select_related("user", "main_category", "sub_category")
+            .prefetch_related("modules")
+        )
+
+        user = getattr(self.request, "user", None)
+        if not user or not user.is_authenticated:
+            return qs.none()
+
+        if user.is_staff or user.is_superuser:
+            return qs
+
+        r = _role_str(user)
+        if r in ("admin", "staff"):
+            return qs
+
+        if is_manufacturer(user) or r == "manufacturer":
+            return qs.none()
+
+        return qs.filter(user=user)
 
     def get_serializer_class(self):
-        """Выбираем сериализатор в зависимости от действия"""
+        # Create serializer — только для входных данных (create/update/patch)
         if self.action in ["create", "update", "partial_update"]:
             return ConfigurationCreateSerializer
         return ConfigurationSerializer
 
-    def perform_create(self, serializer):
-        """Создание конфигурации с текущим пользователем"""
-        serializer.save(user=self.request.user)
+    # ---------- helpers ----------
+    def _lock_if_not_draft(self, instance: Configuration) -> Response | None:
+        if instance.status != Configuration.Status.DRAFT:
+            return Response(
+                {"detail": "Configuration is locked after submit."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return None
 
+    def _recalc_total_price_safe(self, cfg: Configuration) -> None:
+        try:
+            cfg.total_price = cfg.calculate_total_price()
+            cfg.save(update_fields=["total_price", "updated_at"])
+        except Exception:
+            pass
+
+    def _response_full_cfg(self, cfg: Configuration, http_status=status.HTTP_200_OK) -> Response:
+        data = ConfigurationSerializer(cfg, context={"request": self.request}).data
+        return Response(data, status=http_status)
+
+    # ---------- create / update / patch ----------
+    def create(self, request, *args, **kwargs):
+        ser = self.get_serializer(data=request.data, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        ser.save(user=request.user)
+
+        cfg = ser.instance
+        self._recalc_total_price_safe(cfg)
+
+        # ✅ ВАЖНО: в ответ отдаём полный конфиг (со status/total_price)
+        return self._response_full_cfg(cfg, http_status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        locked = self._lock_if_not_draft(instance)
+        if locked:
+            return locked
+
+        ser = self.get_serializer(instance, data=request.data, partial=False, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        ser.save()
+
+        cfg = ser.instance
+        self._recalc_total_price_safe(cfg)
+
+        return self._response_full_cfg(cfg, http_status=status.HTTP_200_OK)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        locked = self._lock_if_not_draft(instance)
+        if locked:
+            return locked
+
+        ser = self.get_serializer(instance, data=request.data, partial=True, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        ser.save()
+
+        cfg = ser.instance
+        self._recalc_total_price_safe(cfg)
+
+        return self._response_full_cfg(cfg, http_status=status.HTTP_200_OK)
+
+    # ---------- actions ----------
     @action(detail=True, methods=["get"])
     def validate(self, request, pk=None):
-        """
-        Реальная валидация сохранённой конфигурации:
-        - те же правила, что и у submit
-        - возвращает is_valid/errors/total_price
-        """
         configuration = self.get_object()
 
         is_valid = True
@@ -63,7 +131,7 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
             validate_configuration_for_submit(configuration)
         except ValidationError as e:
             is_valid = False
-            payload = e.detail
+            payload = e.detail or {}
             details = payload.get("details", [])
             errors = [str(d.get("message")) for d in details]
 
@@ -78,9 +146,6 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def validate_new(self, request):
-        """
-        Реальная валидация новой конфигурации без сохранения.
-        """
         serializer = ConfigurationCreateSerializer(
             data=request.data, context={"request": request}
         )
@@ -101,7 +166,7 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
             validate_configuration_for_submit(temp_config)
         except ValidationError as e:
             is_valid = False
-            payload = e.detail
+            payload = e.detail or {}
             details = payload.get("details", [])
             errors = [str(d.get("message")) for d in details]
 
@@ -116,34 +181,39 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         )
         return Response(response_serializer.data)
 
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], url_path="main_categories")
     def main_categories(self, request):
-        """Получение списка основных категорий (1.1 и 1.2)"""
-        main_categories = (
-            EquipmentCategory.objects.filter(
-                parent__isnull=False,
-                parent__parent__isnull=True,
-            )
-            .select_related("parent")
-            .order_by("id")
+        root = EquipmentCategory.objects.filter(name__iexact="Оборудование").first()
+
+        if root:
+            qs = EquipmentCategory.objects.filter(parent=root, is_active=True)
+        else:
+            qs = EquipmentCategory.objects.filter(parent__isnull=True, is_active=True)
+
+        qs = qs.exclude(name__iexact="Оборудование")
+
+        qs = (
+            qs.order_by("display_order", "name")
+            if hasattr(EquipmentCategory, "display_order")
+            else qs.order_by("name")
         )
 
         data = []
-        for category in main_categories:
+        for c in qs:
             data.append(
                 {
-                    "id": category.id,
-                    "name": category.name,
-                    "parent_name": category.parent.name if category.parent else "",
-                    "equipment_type": category.equipment_type,
-                    "description": getattr(category, "description", "") or "",
+                    "id": c.id,
+                    "name": c.name,
+                    "parent_name": c.parent.name if getattr(c, "parent_id", None) else "-",
+                    "equipment_type": getattr(c, "equipment_type", ""),
+                    "description": getattr(c, "description", "") or "",
+                    "is_active": getattr(c, "is_active", True),
                 }
             )
         return Response(data)
 
     @action(detail=False, methods=["get"])
     def sub_categories(self, request):
-        """Получение подкатегорий для выбранной основной категории"""
         main_category_id = request.query_params.get("main_category_id")
 
         if not main_category_id:
@@ -160,7 +230,13 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        subs = EquipmentCategory.objects.filter(parent=main_category).order_by("id")
+        subs = EquipmentCategory.objects.filter(parent=main_category, is_active=True)
+
+        subs = (
+            subs.order_by("display_order", "id")
+            if hasattr(EquipmentCategory, "display_order")
+            else subs.order_by("id")
+        )
 
         data = []
         for sub in subs:
@@ -171,13 +247,13 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                     "code": getattr(sub, "code", ""),
                     "description": getattr(sub, "description", "") or "",
                     "is_active": getattr(sub, "is_active", True),
+                    "parent_name": sub.parent.name if getattr(sub, "parent_id", None) else "-",
                 }
             )
         return Response(data)
 
     @action(detail=False, methods=["get"])
     def available_modules(self, request):
-        """Получение модулей для выбранной категории"""
         category_id = request.query_params.get("category_id")
         applicable_to = request.query_params.get("applicable_to")
 
@@ -218,13 +294,8 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def set_engineering(self, request, pk=None):
-        """
-        Установить (replace) инженерные системы для конфигурации.
-        Body: {"engineering_option_ids":[31,34,39]}
-        """
         configuration = self.get_object()
 
-        # Жёстко: только для черновика (по ТЗ/lifecycle)
         if configuration.status != Configuration.Status.DRAFT:
             return Response(
                 {"detail": "Engineering systems can be changed only in DRAFT status."},
@@ -235,10 +306,8 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
         ser.is_valid(raise_exception=True)
         ids = ser.validated_data["engineering_option_ids"]
 
-        # replace: удаляем старые
         ConfigurationEngineeringSystem.objects.filter(configuration=configuration).delete()
 
-        # добавляем новые
         opts = EngineeringSystemOption.objects.filter(id__in=ids, is_active=True).select_related("group")
         by_id = {o.id: o for o in opts}
 
@@ -253,27 +322,14 @@ class ConfigurationViewSet(viewsets.ModelViewSet):
                 price_at_selection=opt.price if opt.price_type == "fixed" else None,
             )
 
-        # обновим цену
-        configuration.total_price = configuration.calculate_total_price()
-        configuration.save(update_fields=["total_price", "updated_at"])
+        self._recalc_total_price_safe(configuration)
 
-        return Response(
-            {
-                "configuration_id": configuration.id,
-                "engineering_option_ids": ids,
-                "total_price": str(configuration.total_price),
-            },
-            status=status.HTTP_200_OK,
-        )
+        data = ConfigurationSerializer(configuration, context={"request": request}).data
+        data["engineering_option_ids"] = ids
+        return Response(data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
-        """
-        Отправка конфигурации производителю:
-        - идемпотентно создает Order (1 конфигурация -> 1 заказ) через OneToOne
-        - фиксирует snapshot и total_price
-        - защищено от гонок (atomic + select_for_update) внутри сервиса
-        """
         configuration = self.get_object()
 
         existing_order = getattr(configuration, "order", None)

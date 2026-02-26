@@ -1,4 +1,5 @@
 ﻿from rest_framework import serializers
+from django.utils import timezone
 
 from .models import Configuration, ConfigurationModule
 from catalog.models import EquipmentCategory, EquipmentModule, EngineeringSystemOption
@@ -45,7 +46,15 @@ class ConfigurationSerializer(serializers.ModelSerializer):
 
 
 class ConfigurationCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания/обновления конфигурации"""
+    """
+    Сериализатор для создания/обновления конфигурации.
+
+    ✅ FIX: name НЕ обязателен (UI мог не отправлять) — генерируем автоматически.
+    """
+
+    # ✅ делаем name необязательным, чтобы UI не падал на 400 {"name":["Обязательное поле."]}
+    name = serializers.CharField(required=False, allow_blank=True)
+
     main_category_id = serializers.PrimaryKeyRelatedField(
         queryset=EquipmentCategory.objects.filter(
             parent__isnull=False, parent__parent__isnull=True
@@ -115,6 +124,19 @@ class ConfigurationCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"sub_category_id": "Выбранная подкатегория не принадлежит указанной основной категории"}
                 )
+
+        # ✅ FIX: если name не передали — создадим дефолт прямо тут
+        name = (data.get("name") or "").strip()
+        if not name:
+            main_name = getattr(data.get("main_category"), "name", "") if data.get("main_category") else ""
+            sub_name = getattr(data.get("sub_category"), "name", "") if data.get("sub_category") else ""
+            ts = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+            if main_name and sub_name:
+                data["name"] = f"Draft: {main_name} / {sub_name} ({ts})"
+            elif sub_name:
+                data["name"] = f"Draft: {sub_name} ({ts})"
+            else:
+                data["name"] = f"Draft ({ts})"
 
         # Проверяем совместимость модулей
         modules = data.get("modules", [])

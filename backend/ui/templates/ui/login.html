@@ -21,7 +21,8 @@
       </label>
 
       <div class="row">
-        <button type="submit">Войти</button>
+        <button type="submit" id="login-btn">Войти</button>
+        <button type="button" class="secondary" id="register-user">Зарегистрироваться</button>
         <button type="button" class="secondary" id="fill-admin">Вставить admin</button>
       </div>
 
@@ -51,25 +52,47 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  async function showResult(ok, text) {
+    const resBox = $("login-result");
+    resBox.classList.remove("hidden");
+    resBox.className = "alert " + (ok ? "success" : "danger");
+    resBox.textContent = text;
+  }
+
   $("fill-admin").addEventListener("click", () => {
     $("username").value = "admin";
-    $("password").value = "9841Dark";
+    $("password").value = "qwer-1234";
   });
 
   $("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const resBox = $("login-result");
-    resBox.classList.add("hidden");
-
     try {
       await DiplomAuth.login($("username").value.trim(), $("password").value);
-      resBox.className = "alert success";
-      resBox.textContent = "ОК: токены сохранены. Открой /ui/customer/ или /ui/orders/";
-      resBox.classList.remove("hidden");
+      await showResult(true, "ОК: токены сохранены. Открой /ui/customer/ или /ui/orders/");
     } catch (err) {
-      resBox.className = "alert danger";
-      resBox.textContent = "Ошибка логина: " + (err?.message || String(err));
-      resBox.classList.remove("hidden");
+      await showResult(false, "Ошибка логина: " + (err?.message || String(err)));
+    }
+  });
+
+  $("register-user").addEventListener("click", async () => {
+    const username = $("username").value.trim();
+    const password = $("password").value;
+
+    if (!username || !password) {
+      await showResult(false, "Для регистрации заполни Username и Password.");
+      return;
+    }
+
+    try {
+      // 1) register
+      await DiplomAuth.register(username, password);
+
+      // 2) auto-login
+      await DiplomAuth.login(username, password);
+
+      await showResult(true, "ОК: пользователь создан и залогинен. Открой /ui/customer/ или /ui/orders/");
+    } catch (err) {
+      await showResult(false, "Ошибка регистрации: " + (err?.message || String(err)));
     }
   });
 

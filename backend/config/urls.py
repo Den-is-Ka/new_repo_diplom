@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path("api/orders/", include("orders.urls")),
     path("ui/", include("ui.urls")),
+    path("favicon.ico", lambda request: HttpResponse(status=204)),
 ]
 
 from django.conf import settings

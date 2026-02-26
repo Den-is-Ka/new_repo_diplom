@@ -5,13 +5,13 @@
 <section class="card">
   <h1>Конфигуратор</h1>
   <p class="muted">
-    Поток: категории → подкатегории → создать/выбрать draft → модули → инженерка → validate → submit.
+    Поток: категории → подкатегории → создать/выбрать черновик → модули (оборудование) → инженерные системы → проверка → отправка заявки.
   </p>
 
   <div class="row">
     <button class="secondary" id="btn-check-auth">Проверить токен</button>
-    <button class="secondary" id="btn-load-configs">Загрузить мои конфиги</button>
-    <button class="secondary" id="btn-new-config">Новый draft</button>
+    <button class="secondary" id="btn-load-configs">Загрузить мои конфигурации</button>
+    <button class="secondary" id="btn-new-config">Сбросить выбор (новый черновик)</button>
   </div>
 
   <div class="grid-2">
@@ -19,24 +19,24 @@
       <h3>Категории</h3>
       <div class="form">
         <label class="field">
-          <span>Main category</span>
+          <span>Основная категория</span>
           <select id="main-category"></select>
         </label>
         <label class="field">
-          <span>Sub category</span>
+          <span>Подкатегория</span>
           <select id="sub-category"></select>
         </label>
 
         <div class="row">
-          <button id="btn-create-with-category">Создать draft с выбранными категориями</button>
-          <button class="secondary" id="btn-reload-categories">Перезагрузить списки</button>
+          <button id="btn-create-with-category">Создать черновик с выбранными категориями</button>
+          <button class="secondary" id="btn-reload-categories">Обновить списки категорий</button>
         </div>
       </div>
 
       <div class="kv">
-        <div><span>Configuration ID</span><b id="cfg-id">—</b></div>
-        <div><span>Status</span><b id="cfg-status">—</b></div>
-        <div><span>Total price</span><b id="cfg-total">—</b></div>
+        <div><span>ID конфигурации</span><b id="cfg-id">—</b></div>
+        <div><span>Статус</span><b id="cfg-status">—</b></div>
+        <div><span>Итоговая стоимость</span><b id="cfg-total">—</b></div>
       </div>
 
       <div id="cfg-alert" class="alert hidden"></div>
@@ -44,15 +44,15 @@
 
     <div>
       <h3>Мои конфигурации</h3>
-      <div class="muted">Кликни по строке, чтобы открыть конфиг.</div>
+      <div class="muted">Кликни по строке, чтобы открыть конфигурацию.</div>
       <div class="table-wrap">
         <table class="table" id="cfg-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th>Updated</th>
+              <th>Статус</th>
+              <th>Сумма</th>
+              <th>Обновлено</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -63,12 +63,12 @@
 </section>
 
 <section class="card">
-  <h2>Модули</h2>
-  <p class="muted">Подтягиваются из <code>/api/configurator/configurations/available_modules/</code> по подкатегории.</p>
+  <h2>Оборудование (модули)</h2>
+  <p class="muted">Подтягивается из <code>/api/configurator/configurations/available_modules/</code> по выбранной подкатегории.</p>
 
   <div class="row">
     <button class="secondary" id="btn-load-modules">Загрузить доступные модули</button>
-    <button id="btn-save-modules">Сохранить модули в конфиг (PATCH)</button>
+    <button id="btn-save-modules">Сохранить выбранные модули</button>
   </div>
 
   <div id="modules-alert" class="alert hidden"></div>
@@ -77,11 +77,11 @@
     <table class="table" id="modules-table">
       <thead>
         <tr>
-          <th>Use</th>
-          <th>Name</th>
-          <th>Price</th>
-          <th>Price type</th>
-          <th>Qty</th>
+          <th>Выбрать</th>
+          <th>Название</th>
+          <th>Цена</th>
+          <th>Тип цены</th>
+          <th>Кол-во</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -92,28 +92,30 @@
 <section class="card">
   <h2>Инженерные системы</h2>
   <p class="muted">
-    Список пытаемся получить из каталога (несколько возможных URL), сохранить через
+    Список берётся из каталога, сохранение выполняется через
     <code>POST /api/configurator/configurations/{id}/set_engineering/</code>.
   </p>
 
   <div class="row">
-    <button class="secondary" id="btn-load-eng">Загрузить инженерку</button>
-    <button id="btn-save-eng">Сохранить инженерку</button>
+    <button class="secondary" id="btn-load-eng">Загрузить инженерные системы</button>
+    <button id="btn-save-eng">Сохранить инженерные системы</button>
+    <button class="secondary" id="btn-eng-clear">Сбросить выбор</button>
   </div>
 
   <div id="eng-alert" class="alert hidden"></div>
 
-  <label class="field">
-    <span>Engineering systems (multi-select)</span>
-    <select id="eng-select" multiple size="8"></select>
-  </label>
+  <div class="muted" style="margin-top:8px">
+    Можно выбирать <b>несколько</b> пунктов простыми кликами (как чекбоксы).
+  </div>
+
+  <div id="eng-list" style="margin-top:10px"></div>
 </section>
 
 <section class="card">
-  <h2>Validate / Submit</h2>
+  <h2>Проверка и отправка заявки</h2>
   <div class="row">
-    <button class="secondary" id="btn-validate">Validate</button>
-    <button id="btn-submit">Submit</button>
+    <button class="secondary" id="btn-validate">Проверить конфигурацию</button>
+    <button id="btn-submit">Отправить заявку</button>
   </div>
 
   <div id="submit-alert" class="alert hidden"></div>
@@ -134,7 +136,19 @@
     engineering: [],
   };
 
-  // --- helpers ---
+  const LS_LAST_CFG = "diplom.ui.last_cfg_id";
+
+  const STATUS_LABELS = {
+    draft: "Черновик",
+    submitted: "Отправлено",
+    locked: "Отправлено",
+  };
+
+  function formatStatus(v) {
+    const key = String(v ?? "").trim().toLowerCase();
+    return STATUS_LABELS[key] || (v ?? "—");
+  }
+
   function toId(v) {
     if (v === "" || v === undefined || v === null) return null;
 
@@ -153,7 +167,7 @@
       const s = v.trim();
       if (!s) return null;
       const n = Number(s);
-      return Number.isFinite(n) ? n : null; // нечисловые строки -> null
+      return Number.isFinite(n) ? n : null;
     }
 
     return null;
@@ -167,16 +181,20 @@
     const n = norm(name);
     if (!n) return null;
 
-    // точное совпадение по name/title
     let hit = (list || []).find(x => norm(x.name ?? x.title) === n);
     if (hit?.id) return Number(hit.id);
 
-    // если "A > B" — попробуем взять левую часть
     const left = n.split(">").map(x => x.trim())[0];
     hit = (list || []).find(x => norm(x.name ?? x.title) === left);
     if (hit?.id) return Number(hit.id);
 
     return null;
+  }
+
+  function escapeHtml(s) {
+    return (String(s ?? "")).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
   }
 
   function showAlert(boxId, type, text) {
@@ -186,23 +204,87 @@
     el.classList.toggle("hidden", !text);
   }
 
+  function clearSubmitBox() {
+    showAlert("submit-alert", "", "");
+    $("submit-out").textContent = "";
+  }
+
+  function isDraftCfg() {
+    const st = String(state.cfg?.status ?? state.cfg?.state ?? "").toLowerCase();
+    return st === "draft";
+  }
+
   function setCfg(cfg) {
     state.cfg = cfg;
+
     $("cfg-id").textContent = cfg?.id ?? "—";
-    $("cfg-status").textContent = cfg?.status ?? cfg?.state ?? "—";
+    $("cfg-status").textContent = formatStatus(cfg?.status ?? cfg?.state);
     $("cfg-total").textContent = cfg?.total_price ?? cfg?.total ?? "—";
+
+    if (cfg?.id) localStorage.setItem(LS_LAST_CFG, String(cfg.id));
+    else localStorage.removeItem(LS_LAST_CFG);
+
+    clearSubmitBox();
   }
 
   function cfgRowHtml(cfg) {
     const id = cfg?.id ?? "";
-    const st = cfg?.status ?? cfg?.state ?? "";
+    const st = formatStatus(cfg?.status ?? cfg?.state ?? "");
     const total = cfg?.total_price ?? cfg?.total ?? "";
     const upd = cfg?.updated_at ?? cfg?.modified_at ?? cfg?.created_at ?? "";
     return `<tr data-id="${id}">
-      <td>${id}</td><td>${st}</td><td>${total}</td><td class="muted">${upd}</td>
+      <td>${id}</td><td>${escapeHtml(st)}</td><td>${total}</td><td class="muted">${escapeHtml(upd)}</td>
     </tr>`;
   }
 
+  async function applyCfgToCategorySelectors(cfg) {
+    const mainRaw = cfg?.main_category_id ?? cfg?.main_category;
+    const subRaw  = cfg?.sub_category_id  ?? cfg?.sub_category;
+
+    let mainId = toId(mainRaw);
+    if (!mainId && typeof mainRaw === "string") {
+      mainId = findIdByName(state.mainCategories, mainRaw);
+    }
+
+    if (mainId) {
+      $("main-category").value = String(mainId);
+      await loadSubCategoriesForMain(mainId);
+
+      let subId = toId(subRaw);
+      if (!subId && typeof subRaw === "string") {
+        subId = findIdByName(state.subCategories, subRaw);
+      }
+      if (subId) $("sub-category").value = String(subId);
+    }
+  }
+
+  async function openConfig(id) {
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    if (!state.mainCategories.length) {
+      try { await loadCategories(); } catch {}
+    }
+
+    const cfg = await DiplomAPI.getConfiguration(id);
+    setCfg(cfg);
+
+    try { await applyCfgToCategorySelectors(cfg); } catch {}
+
+    const rawSt = String(cfg?.status ?? cfg?.state ?? "").toLowerCase();
+    if (rawSt === "draft") {
+      showAlert("cfg-alert", "success", "Открыт черновик: можно выбирать модули и инженерные системы, затем отправить заявку.");
+      showAlert("modules-alert", "", "");
+      showAlert("eng-alert", "", "");
+    } else if (rawSt === "submitted") {
+      showAlert("cfg-alert", "danger", "Открыта отправленная конфигурация: изменения запрещены (она зафиксирована после отправки заявки).");
+      showAlert("modules-alert", "danger", "Эта конфигурация уже отправлена — модули менять нельзя.");
+      showAlert("eng-alert", "danger", "Эта конфигурация уже отправлена — инженерные системы менять нельзя.");
+    }
+
+    showAlert("cfg-alert", rawSt === "draft" ? "success" : "danger", `Открыта конфигурация ID=${id}`);
+  }
+
+  // --- categories ---
   async function loadCategories() {
     showAlert("cfg-alert", "", "");
     const main = await DiplomAPI.getMainCategories();
@@ -235,6 +317,7 @@
       ).join("");
   }
 
+  // --- configs ---
   async function loadMyConfigs() {
     const list = await DiplomAPI.listConfigurations();
     const tbody = $("cfg-table").querySelector("tbody");
@@ -246,11 +329,10 @@
     const subId  = toId($("sub-category").value);
 
     if (!mainId || !subId) {
-      showAlert("cfg-alert", "danger", "Выбери main и sub category.");
+      showAlert("cfg-alert", "danger", "Выбери основную категорию и подкатегорию.");
       return;
     }
 
-    // максимально совместимый payload
     const payload = {
       main_category: mainId,
       sub_category: subId,
@@ -260,28 +342,27 @@
 
     const cfg = await DiplomAPI.createConfiguration(payload);
     setCfg(cfg);
-    showAlert("cfg-alert", "success", `Draft создан: id=${cfg.id}`);
+    showAlert("cfg-alert", "success", `Черновик создан: ID=${cfg.id}`);
     await loadMyConfigs();
   }
 
+  // --- modules ---
   async function loadAvailableModules() {
     if (!state.cfg?.id) {
-      showAlert("modules-alert", "danger", "Сначала выбери/создай конфигурацию.");
+      showAlert("modules-alert", "danger", "Сначала выбери или создай конфигурацию (черновик).");
       return;
     }
 
-    // subId может быть только числом
     let subId =
       toId($("sub-category").value) ||
       toId(state.cfg?.sub_category_id ?? state.cfg?.sub_category);
 
-    // если sub_category в cfg строкой, попробуем найти id по текущему списку subCategories
     if (!subId && typeof (state.cfg?.sub_category) === "string" && state.subCategories.length) {
       subId = findIdByName(state.subCategories, state.cfg.sub_category);
     }
 
     if (!subId) {
-      showAlert("modules-alert", "danger", "Не вижу sub_category id. Выбери подкатегорию вручную.");
+      showAlert("modules-alert", "danger", "Не вижу ID подкатегории. Выбери подкатегорию вручную.");
       return;
     }
 
@@ -311,7 +392,11 @@
 
   async function saveModulesToConfig() {
     if (!state.cfg?.id) {
-      showAlert("modules-alert", "danger", "Сначала выбери/создай конфигурацию.");
+      showAlert("modules-alert", "danger", "Сначала выбери или создай конфигурацию (черновик).");
+      return;
+    }
+    if (!isDraftCfg()) {
+      showAlert("modules-alert", "danger", "Эта конфигурация уже отправлена — модули менять нельзя.");
       return;
     }
 
@@ -327,84 +412,211 @@
     }
 
     if (!items.length) {
-      showAlert("modules-alert", "danger", "Выбери хотя бы один модуль (checkbox).");
+      showAlert("modules-alert", "danger", "Выбери хотя бы один модуль (поставь галочку).");
       return;
     }
 
     const patched = await DiplomAPI.patchConfigurationModules(state.cfg.id, items);
     setCfg(patched);
-    showAlert("modules-alert", "success", "Модули сохранены (PATCH OK).");
+    showAlert("modules-alert", "success", "Модули сохранены ✅");
+    await loadMyConfigs();
+  }
+
+  // --- engineering (checkboxes) ---
+  function getEngGroupTitle(x) {
+    const gt = x?.group_title ?? x?.group?.title;
+    if (gt) return String(gt);
+
+    const g = x?.group;
+    if (typeof g === "number") return `Группа #${g}`;
+    if (typeof g === "string" && g.trim()) return g.trim();
+
+    return "Инженерные системы";
+  }
+
+  function getEngTitle(x) {
+    return x?.title ?? x?.name ?? ("#" + x?.id);
+  }
+
+  function getEngPriceText(x) {
+    const p = x?.price;
+    if (p === null || p === undefined || p === "") return "";
+    const pt = x?.price_type ? ` (${x.price_type})` : "";
+    return ` — ${p}${pt}`;
+  }
+
+  function renderEngineeringCheckboxes(list) {
+    const root = $("eng-list");
+    if (!root) return;
+
+    if (!list || !list.length) {
+      root.innerHTML = `<div class="muted">Пусто. Проверь эндпоинты инженерных систем.</div>`;
+      return;
+    }
+
+    const groups = {};
+    for (const x of list) {
+      if (!x) continue;
+      const g = getEngGroupTitle(x);
+      groups[g] = groups[g] || [];
+      groups[g].push(x);
+    }
+
+    const groupNames = Object.keys(groups).sort((a,b) => a.localeCompare(b, "ru"));
+
+    root.innerHTML = groupNames.map((gname) => {
+      const items = groups[gname]
+        .slice()
+        .sort((a,b) => String(getEngTitle(a)).localeCompare(String(getEngTitle(b)), "ru"))
+        .map((x) => {
+          const id = Number(x.id);
+          const label = `${getEngTitle(x)}${getEngPriceText(x)}`;
+          return `
+            <label style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;">
+              <input class="eng-cb" type="checkbox" value="${id}" />
+              <span>${escapeHtml(label)}</span>
+            </label>
+          `;
+        }).join("");
+
+      return `
+        <div class="eng-group-card" style="border:1px solid #2a2f3a;border-radius:12px;padding:10px;margin:10px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <b>${escapeHtml(gname)}</b>
+            <div class="row" style="gap:8px;">
+              <button class="secondary eng-select-all" type="button">Выбрать все</button>
+              <button class="secondary eng-select-none" type="button">Снять все</button>
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            ${items}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    root.querySelectorAll(".eng-select-all").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const card = btn.closest(".eng-group-card");
+        if (!card) return;
+        card.querySelectorAll("input.eng-cb").forEach(cb => cb.checked = true);
+      });
+    });
+
+    root.querySelectorAll(".eng-select-none").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const card = btn.closest(".eng-group-card");
+        if (!card) return;
+        card.querySelectorAll("input.eng-cb").forEach(cb => cb.checked = false);
+      });
+    });
   }
 
   async function loadEngineering() {
     const eng = await DiplomAPI.getEngineeringList();
     state.engineering = eng || [];
-
-    const sel = $("eng-select");
-    sel.innerHTML = state.engineering.map(x => {
-      const name = x.name ?? x.title ?? ("#" + x.id);
-      return `<option value="${x.id}">${escapeHtml(name)}</option>`;
-    }).join("");
+    renderEngineeringCheckboxes(state.engineering);
 
     showAlert("eng-alert",
       state.engineering.length ? "success" : "danger",
       state.engineering.length
-        ? `Загружено инженерки: ${state.engineering.length}`
-        : "Не удалось получить список инженерки. Проверь endpoint(ы) в app.js (ENGINEERING_ENDPOINTS)."
+        ? `Загружено инженерных систем: ${state.engineering.length}`
+        : "Не удалось получить список инженерных систем. Проверь эндпоинты в app.js."
     );
+  }
+
+  function clearEngineeringSelection() {
+    const root = $("eng-list");
+    if (!root) return;
+    root.querySelectorAll("input.eng-cb").forEach(cb => cb.checked = false);
   }
 
   async function saveEngineering() {
     if (!state.cfg?.id) {
-      showAlert("eng-alert", "danger", "Сначала выбери/создай конфигурацию.");
+      showAlert("eng-alert", "danger", "Сначала выбери или создай конфигурацию (черновик).");
+      return;
+    }
+    if (!isDraftCfg()) {
+      showAlert("eng-alert", "danger", "Эта конфигурация уже отправлена — инженерные системы менять нельзя.");
       return;
     }
 
-    const sel = $("eng-select");
-    const ids = Array.from(sel.selectedOptions).map(o => Number(o.value)).filter(Number.isFinite);
+    const root = $("eng-list");
+    const ids = Array.from(root.querySelectorAll("input.eng-cb:checked"))
+      .map(cb => Number(cb.value))
+      .filter(Number.isFinite);
 
     if (!ids.length) {
-      showAlert("eng-alert", "danger", "Выбери хотя бы одну инженерную систему.");
+      showAlert("eng-alert", "danger", "Выбери хотя бы одну инженерную систему (поставь галочку).");
       return;
     }
 
     const cfg = await DiplomAPI.setEngineering(state.cfg.id, ids);
+
+    try {
+      const v = await DiplomAPI.validateConfiguration(state.cfg.id);
+
+      if (v && typeof v.total_price !== "undefined") {
+        cfg.total_price = v.total_price;
+        $("cfg-total").textContent = v.total_price;
+      }
+
+      $("submit-out").textContent = JSON.stringify(v, null, 2);
+      showAlert("submit-alert", "success", "Проверка пройдена (автоматически после сохранения инженерных систем).");
+    } catch (_) {}
+
     setCfg(cfg);
-    showAlert("eng-alert", "success", "Инженерка сохранена (set_engineering OK).");
+    showAlert("eng-alert", "success", `Инженерные системы сохранены ✅ (выбрано: ${ids.length})`);
+    await loadMyConfigs();
   }
 
+  // --- validate / submit ---
   async function validateCfg() {
     if (!state.cfg?.id) {
-      showAlert("submit-alert", "danger", "Сначала выбери/создай конфигурацию.");
+      showAlert("submit-alert", "danger", "Сначала выбери или создай конфигурацию (черновик).");
       return;
     }
+
     const res = await DiplomAPI.validateConfiguration(state.cfg.id);
     $("submit-out").textContent = JSON.stringify(res, null, 2);
-    showAlert("submit-alert", "success", "Validate OK (смотри вывод ниже).");
+
+    if (res?.is_valid) {
+      showAlert("submit-alert", "success", "Проверка успешна ✅ (см. результат ниже).");
+    } else {
+      showAlert("submit-alert", "danger", "Есть ошибки конфигурации ❌ (см. результат ниже).");
+    }
+
+    if (res && typeof res.total_price !== "undefined") {
+      $("cfg-total").textContent = res.total_price;
+    }
   }
 
   async function submitCfg() {
     if (!state.cfg?.id) {
-      showAlert("submit-alert", "danger", "Сначала выбери/создай конфигурацию.");
+      showAlert("submit-alert", "danger", "Сначала выбери или создай конфигурацию (черновик).");
       return;
     }
+
     const res = await DiplomAPI.submitConfiguration(state.cfg.id);
     $("submit-out").textContent = JSON.stringify(res, null, 2);
-    showAlert("submit-alert", "success", "Submit OK. Конфигурация должна быть залочена, создан Order.");
-    await loadMyConfigs();
-  }
+    showAlert("submit-alert", "success", "Заявка отправлена ✅. Конфигурация должна быть зафиксирована, создан заказ.");
 
-  function escapeHtml(s) {
-    return (s ?? "").replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
+    // ✅ FIX: синхронизируем левую панель, чтобы статус/цена стали актуальными
+    try {
+      const freshCfg = await DiplomAPI.getConfiguration(state.cfg.id);
+      setCfg(freshCfg);
+    } catch (_) {}
+
+    await loadMyConfigs();
   }
 
   // --- events ---
   $("btn-check-auth").addEventListener("click", async () => {
     try {
       const ok = await DiplomAuth.ensureAccessToken();
-      showAlert("cfg-alert", "success", ok ? "Access token OK" : "Token missing");
+      showAlert("cfg-alert", "success", ok ? "Токен доступен ✅" : "Токен отсутствует");
     } catch (e) {
       showAlert("cfg-alert", "danger", "Проблема с токеном: " + String(e?.message || e));
     }
@@ -420,11 +632,14 @@
     showAlert("cfg-alert", "", "");
     showAlert("modules-alert", "", "");
     showAlert("eng-alert", "", "");
-    $("submit-out").textContent = "";
+    clearSubmitBox();
+
+    const engList = $("eng-list");
+    if (engList) engList.innerHTML = "";
   });
 
   $("btn-reload-categories").addEventListener("click", async () => {
-    try { await loadCategories(); showAlert("cfg-alert","success","Категории загружены."); }
+    try { await loadCategories(); showAlert("cfg-alert","success","Списки категорий обновлены ✅"); }
     catch (e) { showAlert("cfg-alert","danger",String(e?.message||e)); }
   });
 
@@ -435,7 +650,7 @@
       return;
     }
     try { await loadSubCategoriesForMain(id); }
-    catch (err) { showAlert("cfg-alert","danger","Не загрузились sub categories: " + String(err?.message||err)); }
+    catch (err) { showAlert("cfg-alert","danger","Не загрузились подкатегории: " + String(err?.message||err)); }
   });
 
   $("btn-create-with-category").addEventListener("click", async () => {
@@ -449,39 +664,10 @@
     const id = Number(tr.getAttribute("data-id"));
 
     try {
-      // чтобы можно было искать id по имени
-      if (!state.mainCategories.length) {
-        try { await loadCategories(); } catch {}
-      }
-
-      const cfg = await DiplomAPI.getConfiguration(id);
-      setCfg(cfg);
-
-      // main/sub могут быть: number | object | string
-      const mainRaw = cfg?.main_category_id ?? cfg?.main_category;
-      const subRaw  = cfg?.sub_category_id  ?? cfg?.sub_category;
-
-      let mainId = toId(mainRaw);
-      if (!mainId && typeof mainRaw === "string") {
-        mainId = findIdByName(state.mainCategories, mainRaw);
-      }
-
-      // если mainId нашли — выставим и подгрузим sub
-      if (mainId) {
-        $("main-category").value = String(mainId);
-
-        await loadSubCategoriesForMain(mainId);
-
-        let subId = toId(subRaw);
-        if (!subId && typeof subRaw === "string") {
-          subId = findIdByName(state.subCategories, subRaw);
-        }
-        if (subId) $("sub-category").value = String(subId);
-      }
-
-      showAlert("cfg-alert", "success", `Открыт конфиг id=${id}`);
+      clearEngineeringSelection();
+      await openConfig(id);
     } catch (err) {
-      showAlert("cfg-alert", "danger", "Не удалось открыть конфиг: " + String(err?.message||err));
+      showAlert("cfg-alert", "danger", "Не удалось открыть конфигурацию: " + String(err?.message||err));
     }
   });
 
@@ -505,6 +691,12 @@
     catch (e) { showAlert("eng-alert","danger",String(e?.message||e)); }
   });
 
+  $("btn-eng-clear").addEventListener("click", (e) => {
+    e.preventDefault();
+    clearEngineeringSelection();
+    showAlert("eng-alert", "success", "Выбор инженерных систем сброшен.");
+  });
+
   $("btn-validate").addEventListener("click", async () => {
     try { await validateCfg(); }
     catch (e) { showAlert("submit-alert","danger",String(e?.message||e)); }
@@ -515,10 +707,14 @@
     catch (e) { showAlert("submit-alert","danger",String(e?.message||e)); }
   });
 
-  // init
   (async () => {
     try { await loadCategories(); } catch {}
     try { await loadMyConfigs(); } catch {}
+
+    const last = Number(localStorage.getItem(LS_LAST_CFG) || "");
+    if (Number.isFinite(last) && last > 0) {
+      try { await openConfig(last); } catch {}
+    }
   })();
 })();
 </script>
