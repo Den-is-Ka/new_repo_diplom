@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from users.roles import is_manufacturer
+from users.roles import can_manage_orders
 
 from .models import Order, OrderStatusHistory
 from .permissions import IsOrderOwnerOrStaff
@@ -21,12 +21,12 @@ class OrderViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     """
-    - GET  /api/orders/orders/                 list (staff: all, manufacturer: all, user: own) + ?status=
+    - GET  /api/orders/orders/                 list (admin/staff/manager/manufacturer: all, user: own) + ?status=
     - GET  /api/orders/orders/{id}/            retrieve
     - GET  /api/orders/orders/my/              list only my orders (explicit) + ?status=
-    - GET  /api/orders/orders/manager/         manager list (staff only) + ?status=
+    - GET  /api/orders/orders/manager/         manager list (compat) + ?status=
     - POST /api/orders/orders/{id}/assign_manager/   (staff only)
-    - POST /api/orders/orders/{id}/change_status/    (staff or manufacturer)
+    - POST /api/orders/orders/{id}/change_status/    (admin/staff/manager/manufacturer)
     - GET  /api/orders/orders/{id}/history/          status history
     """
 
@@ -45,7 +45,8 @@ class OrderViewSet(
         )
         user = self.request.user
 
-        if not (user.is_staff or is_manufacturer(user)):
+        # ✅ manager/manufacturer/admin-staff видят всё
+        if not can_manage_orders(user):
             qs = qs.filter(user=user)
 
         st = self.request.query_params.get("status")
@@ -57,7 +58,7 @@ class OrderViewSet(
     @action(detail=False, methods=["get"], url_path="my")
     def my(self, request):
         """
-        Всегда строго "только мои", даже если staff/manufacturer (удобно для UI).
+        Всегда строго "только мои", даже если staff/manager/manufacturer (удобно для UI).
         """
         qs = (
             Order.objects.all()
@@ -75,11 +76,11 @@ class OrderViewSet(
     @action(detail=False, methods=["get"], url_path="manager")
     def manager(self, request):
         """
-        Менеджерский эндпоинт (MVP: manager = staff).
+        Менеджерский эндпоинт (compat). По сути то же, что list, но оставлен для истории.
         """
-        if not request.user.is_staff:
+        if not can_manage_orders(request.user):
             return Response(
-                {"detail": "Only manager/staff can access."},
+                {"detail": "Only manager/staff/manufacturer can access."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -98,11 +99,11 @@ class OrderViewSet(
     @action(detail=True, methods=["post"], url_path="assign_manager")
     def assign_manager_action(self, request, pk=None):
         """
-        Назначение менеджера — только staff.
+        Назначение менеджера — только staff (админка/персонал).
         """
         if not request.user.is_staff:
             return Response(
-                {"detail": "Only manager/staff can assign manager."},
+                {"detail": "Only staff can assign manager."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -133,11 +134,11 @@ class OrderViewSet(
     @action(detail=True, methods=["post"], url_path="change_status")
     def change_status_action(self, request, pk=None):
         """
-        Смена статуса — staff или manufacturer.
+        Смена статуса — admin/staff/manager/manufacturer.
         """
-        if not (request.user.is_staff or is_manufacturer(request.user)):
+        if not can_manage_orders(request.user):
             return Response(
-                {"detail": "Only manager/staff or manufacturer can change status."},
+                {"detail": "Only manager/staff/manufacturer can change status."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

@@ -13,18 +13,25 @@
   <div class="row">
     <button class="secondary" id="btn-reload">Обновить</button>
 
-    <label class="field inline">
-      <span>Новый статус</span>
-      <select id="new-status">
-        <option value="IN_REVIEW">На рассмотрении</option>
-        <option value="APPROVED">Согласован</option>
-        <option value="IN_PRODUCTION">В производстве</option>
-        <option value="COMPLETED">Завершён</option>
-        <option value="REJECTED">Отклонён</option>
-      </select>
-    </label>
+    <!-- Контролы смены статуса (покажем только если есть права) -->
+    <div id="change-status-controls" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label class="field inline">
+        <span>Новый статус</span>
+        <select id="new-status">
+          <option value="IN_REVIEW">На рассмотрении</option>
+          <option value="APPROVED">Согласован</option>
+          <option value="IN_PRODUCTION">В производстве</option>
+          <option value="COMPLETED">Завершён</option>
+          <option value="REJECTED">Отклонён</option>
+        </select>
+      </label>
 
-    <button id="btn-change">Сменить статус</button>
+      <button id="btn-change">Сменить статус</button>
+    </div>
+
+    <div id="no-rights-note" class="muted" style="display:none">
+      Смена статуса доступна только менеджеру/производителю/администратору.
+    </div>
   </div>
 
   <div id="detail-alert" class="alert hidden"></div>
@@ -160,9 +167,6 @@
 
   // Нормализуем модули в единый формат: [{name, qty, unit_price}]
   function normalizeModules(snap) {
-    // варианты:
-    // snap.modules = [{name, quantity, price}]  или [{module_name,...}]
-    // snap может быть {modules:[...]} или {module_items:[...]} или просто массив
     const candidates = [
       snap?.modules,
       snap?.module_items,
@@ -181,9 +185,6 @@
 
   // Нормализуем инженерку: [{group, title, qty, price}]
   function normalizeEngineering(snap) {
-    // варианты:
-    // snap.engineering_systems = [{group, title/name, price, quantity}]
-    // snap.engineering = [...]
     const candidates = [
       snap?.engineering_systems,
       snap?.engineering,
@@ -262,7 +263,6 @@
       return;
     }
 
-    // ожидаемые поля: from_status, to_status, status, created_at/changed_at, by
     const lines = arr.map((h) => {
       const at = h.created_at || h.changed_at || h.timestamp || "";
       const from = h.from_status ? formatStatus(h.from_status) : null;
@@ -281,6 +281,11 @@
 
     const order = await DiplomAPI.getOrder(ORDER_ID);
     const history = await DiplomAPI.getOrderHistory(ORDER_ID);
+
+    // Права на смену статуса (сервер должен отдавать can_change_status)
+    const canChange = !!order.can_change_status;
+    $("change-status-controls").style.display = canChange ? "flex" : "none";
+    $("no-rights-note").style.display = canChange ? "none" : "block";
 
     // сводка
     const num = order.order_number || order.number || ("#" + order.id);

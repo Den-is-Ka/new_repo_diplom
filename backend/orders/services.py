@@ -10,19 +10,23 @@ from django.utils import timezone
 from configurator.models import Configuration
 from configurator.services import validate_configuration_for_submit
 from orders.models import Order, OrderStatus, OrderStatusHistory
-from users.roles import is_manufacturer
+from users.roles import can_manage_orders
 
 User = get_user_model()
 
 
 def _is_manager(user: User) -> bool:
     """
-    MVP: менеджер = staff/superuser.
+    Менеджер по ТЗ:
+    - user.is_manager == True
+    - либо staff/superuser (админка)
     """
     if not user or not user.is_authenticated:
         return False
     return bool(
-        getattr(user, "is_staff", False) or getattr(user, "is_superuser", False)
+        getattr(user, "is_manager", False)
+        or getattr(user, "is_staff", False)
+        or getattr(user, "is_superuser", False)
     )
 
 
@@ -33,15 +37,11 @@ def _require_manager(user: User) -> None:
 
 def _can_change_order_status(actor: User) -> bool:
     """
-    День 2: менять статус могут:
-    - staff/superuser (manager)
+    Менять статус могут:
+    - manager (is_manager=True) / staff / superuser
     - manufacturer (группа manufacturer)
     """
-    return bool(
-        actor
-        and actor.is_authenticated
-        and (_is_manager(actor) or is_manufacturer(actor))
-    )
+    return bool(actor and actor.is_authenticated and can_manage_orders(actor))
 
 
 def _generate_order_number() -> str:
@@ -205,9 +205,10 @@ def submit_configuration(configuration_id: int, user: User) -> Tuple[Order, bool
 def assign_manager(order_id: int, manager_user: User, actor: User) -> Order:
     """
     Назначить менеджера на заказ.
-    actor должен быть менеджером (staff/superuser).
+    В дипломной версии это админская операция: только staff.
     """
-    _require_manager(actor)
+    if not (actor and actor.is_authenticated and getattr(actor, "is_staff", False)):
+        raise PermissionError("Only staff can assign manager.")
 
     order = Order.objects.select_for_update().select_related("user").get(id=order_id)
 
@@ -228,7 +229,7 @@ def change_status(
 ) -> Order:
     """
     Смена статуса заказа:
-    - staff/superuser (manager)
+    - manager (is_manager=True) / staff / superuser
     - manufacturer
 
     Переходы валидируются через Order.transition_to() (матрица в models.py).
@@ -236,7 +237,7 @@ def change_status(
     """
     if not _can_change_order_status(actor):
         raise PermissionError(
-            "Only manager/staff or manufacturer can perform this action."
+            "Only manager/staff/manufacturer can perform this action."
         )
 
     if new_status not in OrderStatus.values:
@@ -244,22 +245,19 @@ def change_status(
 
     order = Order.objects.select_for_update().select_related("user").get(id=order_id)
 
-    # Ограничение "только assigned manager" — оставим только для staff.
-    # Производителю разрешаем менять статусы независимо от manager_id (для дипломной версии).
-    if _is_manager(actor):
-        if (
-            order.manager_id
-            and order.manager_id != actor.id
-            and not getattr(actor, "is_superuser", False)
-        ):
-            raise PermissionError("Only assigned manager can change this order status.")
+    # ✅ ВАЖНО ДЛЯ ТЗ:
+    # По ТЗ менеджер может менять статусы заказов.
+    # Поэтому НЕ ограничиваем manager1 "только назначенным менеджером".
+    # (Иначе менеджер видит все, но менять почти ничего не может.)
+    #
+    # Если когда-нибудь нужно вернуть ограничение — делаем это отдельным флагом/настройкой.
 
     old_status = order.status
     if old_status == new_status:
         return order
 
     order.transition_to(new_status)
-    order.save()  # updated_at авто-обновится
+    order.save()
 
     OrderStatusHistory.objects.create(
         order=order,

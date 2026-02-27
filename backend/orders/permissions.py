@@ -1,12 +1,12 @@
-from rest_framework.permissions import SAFE_METHODS, BasePermission
+from rest_framework.permissions import BasePermission
 
-from users.roles import is_manufacturer
+from users.roles import can_manage_orders
 
 
 class IsOrderOwnerOrStaff(BasePermission):
     """
-    День 1 (P0):
-    - Staff (manager/admin) видит и читает все.
+    - Admin/staff видит и читает все.
+    - Manager (is_manager=True) видит и читает все.
     - Manufacturer (группа manufacturer) видит и читает все.
     - Клиент видит/читает только свои заказы.
     """
@@ -16,6 +16,6 @@ class IsOrderOwnerOrStaff(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if user.is_staff or is_manufacturer(user):
+        if can_manage_orders(user):
             return True
         return getattr(obj, "user_id", None) == user.id
