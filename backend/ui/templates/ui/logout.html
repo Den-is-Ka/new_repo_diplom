@@ -1,0 +1,28 @@
+{% extends "ui/base.html" %}
+{% block title %}Выход • Diplom UI{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1>Выход</h1>
+  <p class="muted">Нажми кнопку — токены удалятся из localStorage.</p>
+  <div class="row">
+    <button id="do-logout">Выйти</button>
+    <a class="button secondary" href="/ui/login/">На логин</a>
+  </div>
+  <div id="out" class="alert hidden"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const out = document.getElementById("out");
+  document.getElementById("do-logout").addEventListener("click", () => {
+    DiplomAuth.logout();
+    out.className = "alert success";
+    out.textContent = "Готово: токены удалены.";
+    out.classList.remove("hidden");
+  });
+})();
+</script>
+{% endblock %}

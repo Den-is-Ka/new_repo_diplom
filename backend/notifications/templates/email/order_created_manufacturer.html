@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+  <body style="font-family: Arial, sans-serif; line-height: 1.5;">
+    <h2>🧾 Новая заявка</h2>
+    <p>Создан новый заказ <b>{{ order.order_number }}</b>.</p>
+
+    <p><b>Клиент:</b>
+      {{ order.snapshot.customer.company_name|default:"—" }} /
+      {{ order.snapshot.customer.email|default:"—" }} /
+      {{ order.snapshot.customer.phone|default:"—" }}
+    </p>
+
+    <p><b>Статус:</b> {{ order.status }}<br/>
+       <b>Стоимость:</b> {{ order.total_price }}</p>
+
+    <h3>Состав</h3>
+    <ul>
+      {% for m in order.snapshot.modules %}
+        <li>{{ m.name }} × {{ m.quantity }} ({{ m.price }})</li>
+      {% endfor %}
+    </ul>
+
+    <p>Откройте панель заказов и переведите заказ в IN_REVIEW.</p>
+  </body>
+</html>

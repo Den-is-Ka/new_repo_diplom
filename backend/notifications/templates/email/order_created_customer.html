@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ru">
+  <body style="font-family: Arial, sans-serif; line-height: 1.5;">
+    <h2>✅ Заявка сформирована</h2>
+    <p>Спасибо! Ваша заявка <b>{{ order.order_number }}</b> успешно сформирована.</p>
+
+    <p><b>Статус:</b> {{ order.status }}<br/>
+       <b>Стоимость:</b> {{ order.total_price }}</p>
+
+    <h3>Состав заявки</h3>
+    <ul>
+      {% for m in order.snapshot.modules %}
+        <li>{{ m.name }} × {{ m.quantity }} ({{ m.price }})</li>
+      {% endfor %}
+    </ul>
+
+    <p>Мы свяжемся с вами, когда заявка перейдет в работу.</p>
+  </body>
+</html>

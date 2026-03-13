@@ -1,0 +1,2346 @@
+openapi: 3.0.3
+info:
+  title: Diplom Container Configurator API
+  version: 1.0.0
+  description: API для конфигуратора оборудования и расчета стоимости контейнера
+paths:
+  /catalog/compatibility-rules/:
+    get:
+      operationId: catalog_compatibility_rules_list
+      description: API для правил совместимости
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCompatibilityRuleList'
+          description: ''
+    post:
+      operationId: catalog_compatibility_rules_create
+      description: API для правил совместимости
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompatibilityRuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompatibilityRuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompatibilityRuleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityRule'
+          description: ''
+  /catalog/compatibility-rules/{id}/:
+    get:
+      operationId: catalog_compatibility_rules_retrieve
+      description: API для правил совместимости
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Правило совместимости.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityRule'
+          description: ''
+    put:
+      operationId: catalog_compatibility_rules_update
+      description: API для правил совместимости
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Правило совместимости.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompatibilityRuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompatibilityRuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompatibilityRuleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityRule'
+          description: ''
+    patch:
+      operationId: catalog_compatibility_rules_partial_update
+      description: API для правил совместимости
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Правило совместимости.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCompatibilityRuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCompatibilityRuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCompatibilityRuleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityRule'
+          description: ''
+    delete:
+      operationId: catalog_compatibility_rules_destroy
+      description: API для правил совместимости
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Правило совместимости.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '204':
+          description: No response body
+  /catalog/equipment-categories/:
+    get:
+      operationId: catalog_equipment_categories_list
+      description: API для категорий оборудования (иерархия)
+      parameters:
+      - in: query
+        name: equipment_type
+        schema:
+          type: string
+          title: Тип оборудования
+          enum:
+          - COMPRESSOR
+          - DGU
+          - UNIVERSAL
+        description: |-
+          * `DGU` - Дизельно-генераторная установка
+          * `COMPRESSOR` - Компрессорная установка
+          * `UNIVERSAL` - Универсальный
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: parent
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipmentCategoryList'
+          description: ''
+    post:
+      operationId: catalog_equipment_categories_create
+      description: API для категорий оборудования (иерархия)
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentCategoryRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentCategory'
+          description: ''
+  /catalog/equipment-categories/{id}/:
+    get:
+      operationId: catalog_equipment_categories_retrieve
+      description: API для категорий оборудования (иерархия)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Категория оборудования.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentCategory'
+          description: ''
+    put:
+      operationId: catalog_equipment_categories_update
+      description: API для категорий оборудования (иерархия)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Категория оборудования.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentCategoryRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentCategory'
+          description: ''
+    patch:
+      operationId: catalog_equipment_categories_partial_update
+      description: API для категорий оборудования (иерархия)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Категория оборудования.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentCategoryRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentCategory'
+          description: ''
+    delete:
+      operationId: catalog_equipment_categories_destroy
+      description: API для категорий оборудования (иерархия)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Категория оборудования.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '204':
+          description: No response body
+  /catalog/equipment-modules/:
+    get:
+      operationId: catalog_equipment_modules_list
+      description: API для модулей оборудования
+      parameters:
+      - in: query
+        name: applicable_to
+        schema:
+          type: string
+          title: Применимость к оборудованию
+          enum:
+          - BOTH
+          - COMPRESSOR
+          - DGU
+        description: |-
+          * `DGU` - Только для ДГУ
+          * `COMPRESSOR` - Только для компрессоров
+          * `BOTH` - Универсальный (для обоих)
+      - in: query
+        name: category
+        schema:
+          type: integer
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: is_default
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: physical_type
+        schema:
+          type: integer
+      - in: query
+        name: price_type
+        schema:
+          type: string
+          title: Тип цены
+          enum:
+          - fixed
+          - individual
+          - request
+        description: |-
+          * `fixed` - Фиксированная цена
+          * `individual` - Индивидуальный расчёт
+          * `request` - По запросу
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipmentModuleList'
+          description: ''
+    post:
+      operationId: catalog_equipment_modules_create
+      description: API для модулей оборудования
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentModuleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentModule'
+          description: ''
+  /catalog/equipment-modules/{id}/:
+    get:
+      operationId: catalog_equipment_modules_retrieve
+      description: API для модулей оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Модуль оборудования.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentModule'
+          description: ''
+    put:
+      operationId: catalog_equipment_modules_update
+      description: API для модулей оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Модуль оборудования.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentModuleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentModule'
+          description: ''
+    patch:
+      operationId: catalog_equipment_modules_partial_update
+      description: API для модулей оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Модуль оборудования.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentModuleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentModule'
+          description: ''
+    delete:
+      operationId: catalog_equipment_modules_destroy
+      description: API для модулей оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Модуль оборудования.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '204':
+          description: No response body
+  /catalog/equipment-physical-types/:
+    get:
+      operationId: catalog_equipment_physical_types_list
+      description: API для физических типов оборудования
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipmentPhysicalTypeList'
+          description: ''
+    post:
+      operationId: catalog_equipment_physical_types_create
+      description: API для физических типов оборудования
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentPhysicalTypeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentPhysicalTypeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentPhysicalTypeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentPhysicalType'
+          description: ''
+  /catalog/equipment-physical-types/{id}/:
+    get:
+      operationId: catalog_equipment_physical_types_retrieve
+      description: API для физических типов оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Физический тип оборудования.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentPhysicalType'
+          description: ''
+    put:
+      operationId: catalog_equipment_physical_types_update
+      description: API для физических типов оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Физический тип оборудования.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentPhysicalTypeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipmentPhysicalTypeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipmentPhysicalTypeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentPhysicalType'
+          description: ''
+    patch:
+      operationId: catalog_equipment_physical_types_partial_update
+      description: API для физических типов оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Физический тип оборудования.
+        required: true
+      tags:
+      - catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentPhysicalTypeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentPhysicalTypeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipmentPhysicalTypeRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentPhysicalType'
+          description: ''
+    delete:
+      operationId: catalog_equipment_physical_types_destroy
+      description: API для физических типов оборудования
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Физический тип оборудования.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '204':
+          description: No response body
+  /configurator/configurations/:
+    get:
+      operationId: configurator_configurations_list
+      description: ViewSet для работы с конфигурациями.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConfigurationList'
+          description: ''
+    post:
+      operationId: configurator_configurations_create
+      description: ViewSet для работы с конфигурациями.
+      tags:
+      - configurator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigurationCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfigurationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfigurationCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationCreate'
+          description: ''
+  /configurator/configurations/{id}/:
+    get:
+      operationId: configurator_configurations_retrieve
+      description: ViewSet для работы с конфигурациями.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+          description: ''
+    put:
+      operationId: configurator_configurations_update
+      description: ViewSet для работы с конфигурациями.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - configurator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigurationCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfigurationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfigurationCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationCreate'
+          description: ''
+    patch:
+      operationId: configurator_configurations_partial_update
+      description: ViewSet для работы с конфигурациями.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - configurator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConfigurationCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConfigurationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConfigurationCreateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationCreate'
+          description: ''
+    delete:
+      operationId: configurator_configurations_destroy
+      description: ViewSet для работы с конфигурациями.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '204':
+          description: No response body
+  /configurator/configurations/{id}/validate/:
+    get:
+      operationId: configurator_configurations_validate_retrieve
+      description: Валидация конкретной конфигурации
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+          description: ''
+  /configurator/configurations/available_modules/:
+    get:
+      operationId: configurator_configurations_available_modules_retrieve
+      description: Получение модулей для выбранной категории
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+          description: ''
+  /configurator/configurations/main_categories/:
+    get:
+      operationId: configurator_configurations_main_categories_retrieve
+      description: Получение списка основных категорий (1.1 и 1.2)
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+          description: ''
+  /configurator/configurations/sub_categories/:
+    get:
+      operationId: configurator_configurations_sub_categories_retrieve
+      description: Получение подкатегорий для выбранной основной категории
+      tags:
+      - configurator
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+          description: ''
+  /configurator/configurations/validate_new/:
+    post:
+      operationId: configurator_configurations_validate_new_create
+      description: Валидация новой конфигурации без сохранения
+      tags:
+      - configurator
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigurationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfigurationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfigurationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+          description: ''
+  /token/:
+    post:
+      operationId: token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      security:
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /users/token/verify/:
+    post:
+      operationId: users_token_verify_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      security:
+      - BearerAuth:
+          type: http
+          scheme: bearer
+          bearerFormat: JWT
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    ApplicableCategoryEnum:
+      enum:
+      - DGU
+      - COMPRESSOR
+      - UNIVERSAL
+      type: string
+      description: |-
+        * `DGU` - Дизельно-генераторная установка
+        * `COMPRESSOR` - Компрессорная установка
+        * `UNIVERSAL` - Универсальный
+    ApplicableToEnum:
+      enum:
+      - DGU
+      - COMPRESSOR
+      - BOTH
+      type: string
+      description: |-
+        * `DGU` - Только для ДГУ
+        * `COMPRESSOR` - Только для компрессоров
+        * `BOTH` - Универсальный (для обоих)
+    CompatibilityRule:
+      type: object
+      description: Сериализатор для правил совместимости
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название правила
+          maxLength: 200
+        rule_type:
+          allOf:
+          - $ref: '#/components/schemas/RuleTypeEnum'
+          title: Тип правила
+        description:
+          type: string
+          title: Описание правила
+        category:
+          type: integer
+          nullable: true
+          title: Категория
+          description: Для правил, связанных с категориями
+        category_name:
+          type: string
+          readOnly: true
+        excluded_categories:
+          type: array
+          items:
+            type: integer
+            title: Исключаемые категории
+          title: Исключаемые категории
+          description: Категории, которые становятся недоступными при выборе указанной
+            категории
+        modules:
+          type: array
+          items:
+            type: integer
+            title: Модули
+          title: Модули
+        max_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          title: Максимальное количество
+          description: Для rule_type='limit'
+        required_module:
+          type: integer
+          nullable: true
+          title: Требуемый модуль
+          description: Для rule_type='requirement'
+        is_active:
+          type: boolean
+          title: Активно
+      required:
+      - category_name
+      - id
+      - name
+      - rule_type
+    CompatibilityRuleRequest:
+      type: object
+      description: Сериализатор для правил совместимости
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название правила
+          maxLength: 200
+        rule_type:
+          allOf:
+          - $ref: '#/components/schemas/RuleTypeEnum'
+          title: Тип правила
+        description:
+          type: string
+          title: Описание правила
+        category:
+          type: integer
+          nullable: true
+          title: Категория
+          description: Для правил, связанных с категориями
+        excluded_categories:
+          type: array
+          items:
+            type: integer
+            title: Исключаемые категории
+          title: Исключаемые категории
+          description: Категории, которые становятся недоступными при выборе указанной
+            категории
+        modules:
+          type: array
+          items:
+            type: integer
+            title: Модули
+          title: Модули
+        max_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          title: Максимальное количество
+          description: Для rule_type='limit'
+        required_module:
+          type: integer
+          nullable: true
+          title: Требуемый модуль
+          description: Для rule_type='requirement'
+        is_active:
+          type: boolean
+          title: Активно
+      required:
+      - name
+      - rule_type
+    Configuration:
+      type: object
+      description: Сериализатор для вывода конфигурации
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: РќР°Р·РІР°РЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+          maxLength: 200
+        description:
+          type: string
+          title: РћРїРёСЃР°РЅРёРµ
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+          title: РЎС‚Р°С‚СѓСЃ
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        main_category:
+          type: string
+          readOnly: true
+        sub_category:
+          type: string
+          readOnly: true
+        modules:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        total_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          title: РћР±С‰Р°СЏ СЃС‚РѕРёРјРѕСЃС‚СЊ
+        container_config:
+          title: РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РєРѕРЅС‚РµР№РЅРµСЂР°
+          description: РџР°СЂР°РјРµС‚СЂС‹ РєРѕРЅС‚РµР№РЅРµСЂР° РІ С„РѕСЂРјР°С‚Рµ JSON
+        company_name:
+          type: string
+          title: РќР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРµРґРїСЂРёСЏС‚РёСЏ
+          maxLength: 200
+        phone:
+          type: string
+          title: РўРµР»РµС„РѕРЅ
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        order_number:
+          type: string
+          readOnly: true
+          title: РќРѕРјРµСЂ Р·Р°РєР°Р·Р°
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Р”Р°С‚Р° СЃРѕР·РґР°РЅРёСЏ
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Р”Р°С‚Р° РѕР±РЅРѕРІР»РµРЅРёСЏ
+      required:
+      - created_at
+      - id
+      - main_category
+      - modules
+      - name
+      - order_number
+      - status
+      - sub_category
+      - total_price
+      - updated_at
+      - user
+    ConfigurationCreate:
+      type: object
+      description: Сериализатор для создания/обновления конфигурации
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: РќР°Р·РІР°РЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+          maxLength: 200
+        description:
+          type: string
+          title: РћРїРёСЃР°РЅРёРµ
+        container_config:
+          description: онфигурация контейнера в формате JSON
+        company_name:
+          type: string
+          title: РќР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРµРґРїСЂРёСЏС‚РёСЏ
+          maxLength: 200
+        phone:
+          type: string
+          title: РўРµР»РµС„РѕРЅ
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+      required:
+      - id
+      - name
+    ConfigurationCreateRequest:
+      type: object
+      description: Сериализатор для создания/обновления конфигурации
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: РќР°Р·РІР°РЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+          maxLength: 200
+        description:
+          type: string
+          title: РћРїРёСЃР°РЅРёРµ
+        main_category_id:
+          type: integer
+          writeOnly: true
+          description: ID основной категории (1.1 или 1.2)
+        sub_category_id:
+          type: integer
+          writeOnly: true
+          description: ID подкатегории (1.1.1, 1.2.2 и т.д.)
+        module_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+        container_config:
+          description: онфигурация контейнера в формате JSON
+        company_name:
+          type: string
+          title: РќР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРµРґРїСЂРёСЏС‚РёСЏ
+          maxLength: 200
+        phone:
+          type: string
+          title: РўРµР»РµС„РѕРЅ
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+      required:
+      - name
+      - sub_category_id
+    ConfigurationRequest:
+      type: object
+      description: Сериализатор для вывода конфигурации
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: РќР°Р·РІР°РЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+          maxLength: 200
+        description:
+          type: string
+          title: РћРїРёСЃР°РЅРёРµ
+        container_config:
+          title: РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РєРѕРЅС‚РµР№РЅРµСЂР°
+          description: РџР°СЂР°РјРµС‚СЂС‹ РєРѕРЅС‚РµР№РЅРµСЂР° РІ С„РѕСЂРјР°С‚Рµ JSON
+        company_name:
+          type: string
+          title: РќР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРµРґРїСЂРёСЏС‚РёСЏ
+          maxLength: 200
+        phone:
+          type: string
+          title: РўРµР»РµС„РѕРЅ
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+      required:
+      - name
+    EquipmentCategory:
+      type: object
+      description: Сериализатор для категорий оборудования
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название категории
+          maxLength: 200
+        parent:
+          type: integer
+          nullable: true
+        parent_name:
+          type: string
+          readOnly: true
+        equipment_type:
+          allOf:
+          - $ref: '#/components/schemas/EquipmentTypeEnum'
+          title: Тип оборудования
+        description:
+          type: string
+          title: Описание
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Порядок отображения
+        code:
+          type: string
+          readOnly: true
+          title: Код категории
+          description: 'Например: 1.1.1'
+        is_active:
+          type: boolean
+          title: Активна
+        children_count:
+          type: integer
+          readOnly: true
+        modules_count:
+          type: integer
+          readOnly: true
+      required:
+      - children_count
+      - code
+      - id
+      - modules_count
+      - name
+      - parent_name
+    EquipmentCategoryRequest:
+      type: object
+      description: Сериализатор для категорий оборудования
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название категории
+          maxLength: 200
+        parent:
+          type: integer
+          nullable: true
+        equipment_type:
+          allOf:
+          - $ref: '#/components/schemas/EquipmentTypeEnum'
+          title: Тип оборудования
+        description:
+          type: string
+          title: Описание
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Порядок отображения
+        is_active:
+          type: boolean
+          title: Активна
+      required:
+      - name
+    EquipmentModule:
+      type: object
+      description: Сериализатор для модулей оборудования
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название модуля
+          maxLength: 200
+        category:
+          allOf:
+          - $ref: '#/components/schemas/EquipmentCategory'
+          readOnly: true
+        physical_type:
+          allOf:
+          - $ref: '#/components/schemas/EquipmentPhysicalType'
+          readOnly: true
+        applicable_to:
+          allOf:
+          - $ref: '#/components/schemas/ApplicableToEnum'
+          title: Применимость к оборудованию
+        description:
+          type: string
+          title: Описание
+        price_type:
+          allOf:
+          - $ref: '#/components/schemas/PriceTypeEnum'
+          title: Тип цены
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          title: Цена
+          description: Заполняется только если price_type='fixed'
+        display_price:
+          type: string
+          readOnly: true
+        main_image:
+          type: string
+          format: uri
+          nullable: true
+          title: Основное изображение
+        power_consumption:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          title: Потребляемая мощность, Вт
+        dimensions:
+          type: string
+          title: Габариты (ШхВхГ)
+          maxLength: 100
+        weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+          title: Вес, кг
+        specifications:
+          title: Технические характеристики
+          description: Дополнительные характеристики в формате JSON
+        is_active:
+          type: boolean
+          title: Активен
+        is_default:
+          type: boolean
+          title: Выбран по умолчанию
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата создания
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата обновления
+      required:
+      - category
+      - created_at
+      - display_price
+      - id
+      - name
+      - physical_type
+      - updated_at
+    EquipmentModuleRequest:
+      type: object
+      description: Сериализатор для модулей оборудования
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название модуля
+          maxLength: 200
+        category_id:
+          type: integer
+          writeOnly: true
+        physical_type_id:
+          type: integer
+          writeOnly: true
+        applicable_to:
+          allOf:
+          - $ref: '#/components/schemas/ApplicableToEnum'
+          title: Применимость к оборудованию
+        description:
+          type: string
+          title: Описание
+        price_type:
+          allOf:
+          - $ref: '#/components/schemas/PriceTypeEnum'
+          title: Тип цены
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          title: Цена
+          description: Заполняется только если price_type='fixed'
+        main_image:
+          type: string
+          format: binary
+          nullable: true
+          title: Основное изображение
+        power_consumption:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          title: Потребляемая мощность, Вт
+        dimensions:
+          type: string
+          title: Габариты (ШхВхГ)
+          maxLength: 100
+        weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+          title: Вес, кг
+        specifications:
+          title: Технические характеристики
+          description: Дополнительные характеристики в формате JSON
+        is_active:
+          type: boolean
+          title: Активен
+        is_default:
+          type: boolean
+          title: Выбран по умолчанию
+      required:
+      - category_id
+      - name
+      - physical_type_id
+    EquipmentPhysicalType:
+      type: object
+      description: Сериализатор для физических типов оборудования
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название типа
+          maxLength: 100
+        description:
+          type: string
+          title: Описание
+        image:
+          type: string
+          format: uri
+          nullable: true
+          title: Изображение
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Порядок отображения
+        applicable_category:
+          allOf:
+          - $ref: '#/components/schemas/ApplicableCategoryEnum'
+          title: Применимость
+        modules_count:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - modules_count
+      - name
+    EquipmentPhysicalTypeRequest:
+      type: object
+      description: Сериализатор для физических типов оборудования
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название типа
+          maxLength: 100
+        description:
+          type: string
+          title: Описание
+        image:
+          type: string
+          format: binary
+          nullable: true
+          title: Изображение
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Порядок отображения
+        applicable_category:
+          allOf:
+          - $ref: '#/components/schemas/ApplicableCategoryEnum'
+          title: Применимость
+      required:
+      - name
+    EquipmentTypeEnum:
+      enum:
+      - DGU
+      - COMPRESSOR
+      - UNIVERSAL
+      type: string
+      description: |-
+        * `DGU` - Дизельно-генераторная установка
+        * `COMPRESSOR` - Компрессорная установка
+        * `UNIVERSAL` - Универсальный
+    PaginatedCompatibilityRuleList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompatibilityRule'
+    PaginatedConfigurationList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Configuration'
+    PaginatedEquipmentCategoryList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentCategory'
+    PaginatedEquipmentModuleList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentModule'
+    PaginatedEquipmentPhysicalTypeList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentPhysicalType'
+    PatchedCompatibilityRuleRequest:
+      type: object
+      description: Сериализатор для правил совместимости
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название правила
+          maxLength: 200
+        rule_type:
+          allOf:
+          - $ref: '#/components/schemas/RuleTypeEnum'
+          title: Тип правила
+        description:
+          type: string
+          title: Описание правила
+        category:
+          type: integer
+          nullable: true
+          title: Категория
+          description: Для правил, связанных с категориями
+        excluded_categories:
+          type: array
+          items:
+            type: integer
+            title: Исключаемые категории
+          title: Исключаемые категории
+          description: Категории, которые становятся недоступными при выборе указанной
+            категории
+        modules:
+          type: array
+          items:
+            type: integer
+            title: Модули
+          title: Модули
+        max_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          title: Максимальное количество
+          description: Для rule_type='limit'
+        required_module:
+          type: integer
+          nullable: true
+          title: Требуемый модуль
+          description: Для rule_type='requirement'
+        is_active:
+          type: boolean
+          title: Активно
+    PatchedConfigurationCreateRequest:
+      type: object
+      description: Сериализатор для создания/обновления конфигурации
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: РќР°Р·РІР°РЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+          maxLength: 200
+        description:
+          type: string
+          title: РћРїРёСЃР°РЅРёРµ
+        main_category_id:
+          type: integer
+          writeOnly: true
+          description: ID основной категории (1.1 или 1.2)
+        sub_category_id:
+          type: integer
+          writeOnly: true
+          description: ID подкатегории (1.1.1, 1.2.2 и т.д.)
+        module_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+        container_config:
+          description: онфигурация контейнера в формате JSON
+        company_name:
+          type: string
+          title: РќР°РёРјРµРЅРѕРІР°РЅРёРµ РїСЂРµРґРїСЂРёСЏС‚РёСЏ
+          maxLength: 200
+        phone:
+          type: string
+          title: РўРµР»РµС„РѕРЅ
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+    PatchedEquipmentCategoryRequest:
+      type: object
+      description: Сериализатор для категорий оборудования
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название категории
+          maxLength: 200
+        parent:
+          type: integer
+          nullable: true
+        equipment_type:
+          allOf:
+          - $ref: '#/components/schemas/EquipmentTypeEnum'
+          title: Тип оборудования
+        description:
+          type: string
+          title: Описание
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Порядок отображения
+        is_active:
+          type: boolean
+          title: Активна
+    PatchedEquipmentModuleRequest:
+      type: object
+      description: Сериализатор для модулей оборудования
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название модуля
+          maxLength: 200
+        category_id:
+          type: integer
+          writeOnly: true
+        physical_type_id:
+          type: integer
+          writeOnly: true
+        applicable_to:
+          allOf:
+          - $ref: '#/components/schemas/ApplicableToEnum'
+          title: Применимость к оборудованию
+        description:
+          type: string
+          title: Описание
+        price_type:
+          allOf:
+          - $ref: '#/components/schemas/PriceTypeEnum'
+          title: Тип цены
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+          title: Цена
+          description: Заполняется только если price_type='fixed'
+        main_image:
+          type: string
+          format: binary
+          nullable: true
+          title: Основное изображение
+        power_consumption:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          title: Потребляемая мощность, Вт
+        dimensions:
+          type: string
+          title: Габариты (ШхВхГ)
+          maxLength: 100
+        weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          nullable: true
+          title: Вес, кг
+        specifications:
+          title: Технические характеристики
+          description: Дополнительные характеристики в формате JSON
+        is_active:
+          type: boolean
+          title: Активен
+        is_default:
+          type: boolean
+          title: Выбран по умолчанию
+    PatchedEquipmentPhysicalTypeRequest:
+      type: object
+      description: Сериализатор для физических типов оборудования
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название типа
+          maxLength: 100
+        description:
+          type: string
+          title: Описание
+        image:
+          type: string
+          format: binary
+          nullable: true
+          title: Изображение
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Порядок отображения
+        applicable_category:
+          allOf:
+          - $ref: '#/components/schemas/ApplicableCategoryEnum'
+          title: Применимость
+    PriceTypeEnum:
+      enum:
+      - fixed
+      - individual
+      - request
+      type: string
+      description: |-
+        * `fixed` - Фиксированная цена
+        * `individual` - Индивидуальный расчёт
+        * `request` - По запросу
+    RuleTypeEnum:
+      enum:
+      - exclusion
+      - requirement
+      - group
+      - limit
+      - category_exclusion
+      type: string
+      description: |-
+        * `exclusion` - Взаимоисключение
+        * `requirement` - Требование
+        * `group` - Группа
+        * `limit` - Ограничение количества
+        * `category_exclusion` - Исключение по категории
+    StatusEnum:
+      enum:
+      - draft
+      - submitted
+      - processing
+      - quoted
+      - completed
+      type: string
+      description: |-
+        * `draft` - Р§РµСЂРЅРѕРІРёРє
+        * `submitted` - РћС‚РїСЂР°РІР»РµРЅ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЋ
+        * `processing` - Р’ РѕР±СЂР°Р±РѕС‚РєРµ
+        * `quoted` - РЎС‡РµС‚ РІС‹СЃС‚Р°РІР»РµРЅ
+        * `completed` - Р—Р°РІРµСЂС€РµРЅ
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Имя пользователя
+          description: Обязательное поле. Не более 150 символов. Только буквы, цифры
+            и символы @/./+/-/_.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+      required:
+      - id
+      - username
+    UserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Имя пользователя
+          description: Обязательное поле. Не более 150 символов. Только буквы, цифры
+            и символы @/./+/-/_.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+      required:
+      - username
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

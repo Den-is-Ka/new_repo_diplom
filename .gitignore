@@ -1,37 +1,29 @@
-# Python / venv
-.venv/
-venv/
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.pyd
+.venv/
+venv/
 
-# Django
-*.sqlite3
-db.sqlite3
-media/
-staticfiles/
-local_settings.py
-
-# Environment variables
-.env
-
-# Logs
-*.log
-
-# OS / IDE
-.DS_Store
-Thumbs.db
+# ide
 .idea/
 .vscode/
 
-# Tests / coverage
-.pytest_cache/
+# django
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# docker volumes (если вдруг где-то лежит)
+diplom_pgdata/
+tools/
 .coverage
 htmlcov/
-
-# Build
-build/
-dist/
-*.egg-info/
 

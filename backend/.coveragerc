@@ -1,0 +1,26 @@
+# backend/.coveragerc
+[run]
+branch = True
+
+omit =
+    manage.py
+    config/asgi.py
+    config/wsgi.py
+
+    # management scripts (не core-логика приложения)
+    */management/commands/*
+
+    # demo seeding / вспомогательные заготовки
+    users/services/demo_seed.py
+    users/views.py
+    catalog/views.py
+
+    # инфраструктура / редко тестируемое на защите
+    config/api_exceptions.py
+    notifications/urls.py
+    notifications/views.py
+
+    # неиспользуемый/бэкап
+    orders/models_stub_backup.py
+    catalog/constants.py
+    configurator/api.py

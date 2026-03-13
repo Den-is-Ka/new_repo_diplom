@@ -1,0 +1,105 @@
+{% extends "ui/base.html" %}
+{% block title %}Логин • Diplom UI{% endblock %}
+
+{% block content %}
+<div class="grid">
+  <section class="card">
+    <h1>Вход (JWT)</h1>
+    <p class="muted">
+      Логин делается через <code>/api/token/</code>. Токены сохраняются в <code>localStorage</code>.
+    </p>
+
+    <form id="login-form" class="form">
+      <label class="field">
+        <span>Username</span>
+        <input id="username" autocomplete="username" required />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input id="password" type="password" autocomplete="current-password" required />
+      </label>
+
+      <div class="row">
+        <button type="submit" id="login-btn">Войти</button>
+        <button type="button" class="secondary" id="register-user">Зарегистрироваться</button>
+      </div>
+
+      <div id="login-result" class="alert hidden"></div>
+
+      <hr/>
+
+      <p class="muted">
+        После логина можно идти в <a href="/ui/customer/">Конфигуратор</a> или <a href="/ui/orders/">Заказы</a>.
+      </p>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Тест</h2>
+    <p class="muted">Проверка: кнопка “Пинг API” должна вернуть 200/401.</p>
+    <div class="row">
+      <button id="ping-api" class="secondary" type="button">Пинг API</button>
+    </div>
+    <pre id="ping-out" class="code"></pre>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  async function showResult(ok, text) {
+    const resBox = $("login-result");
+    resBox.classList.remove("hidden");
+    resBox.className = "alert " + (ok ? "success" : "danger");
+    resBox.textContent = text;
+  }
+
+  $("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await DiplomAuth.login($("username").value.trim(), $("password").value);
+      await showResult(true, "ОК: токены сохранены. Открой /ui/customer/ или /ui/orders/");
+    } catch (err) {
+      await showResult(false, "Ошибка логина: " + (err?.message || String(err)));
+    }
+  });
+
+  $("register-user").addEventListener("click", async () => {
+    const username = $("username").value.trim();
+    const password = $("password").value;
+
+    if (!username || !password) {
+      await showResult(false, "Для регистрации заполни Username и Password.");
+      return;
+    }
+
+    try {
+      // 1) register
+      await DiplomAuth.register(username, password);
+
+      // 2) auto-login
+      await DiplomAuth.login(username, password);
+
+      await showResult(true, "ОК: пользователь создан и залогинен. Открой /ui/customer/ или /ui/orders/");
+    } catch (err) {
+      await showResult(false, "Ошибка регистрации: " + (err?.message || String(err)));
+    }
+  });
+
+  $("ping-api").addEventListener("click", async () => {
+    const out = $("ping-out");
+    out.textContent = "Loading...";
+    try {
+      const r = await fetch((window.DIPLOM.API_BASE || "") + "/api/schema/", { method: "GET" });
+      out.textContent = `HTTP ${r.status}\n` + (await r.text()).slice(0, 800);
+    } catch (e) {
+      out.textContent = String(e);
+    }
+  });
+})();
+</script>
+{% endblock %}

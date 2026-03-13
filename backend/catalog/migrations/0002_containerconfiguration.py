@@ -1,0 +1,284 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("catalog", "0001_initial"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="ContainerConfiguration",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "height",
+                    models.CharField(
+                        choices=[
+                            ("1800", "1800 мм"),
+                            ("2200", "2200 мм"),
+                            ("2600", "2600 мм"),
+                            ("3000", "3000 мм"),
+                            ("3400", "3400 мм"),
+                        ],
+                        default="2600",
+                        max_length=10,
+                        verbose_name="Высота",
+                    ),
+                ),
+                (
+                    "length",
+                    models.CharField(
+                        choices=[
+                            ("4000", "4000 мм"),
+                            ("6000", "6000 мм"),
+                            ("9000", "9000 мм"),
+                            ("12000", "12000 мм"),
+                            ("14000", "14000 мм"),
+                        ],
+                        default="6000",
+                        max_length=10,
+                        verbose_name="Длина",
+                    ),
+                ),
+                (
+                    "width",
+                    models.CharField(
+                        choices=[
+                            ("1500", "1500 мм"),
+                            ("2000", "2000 мм"),
+                            ("2500", "2500 мм"),
+                            ("3000", "3000 мм"),
+                            ("3400", "3400 мм"),
+                        ],
+                        default="2500",
+                        max_length=10,
+                        verbose_name="Ширина",
+                    ),
+                ),
+                (
+                    "container_type",
+                    models.CharField(
+                        choices=[
+                            ("metal", "Цельнометаллический"),
+                            ("sandwich", "Каркасный + сендвич панели"),
+                        ],
+                        default="metal",
+                        max_length=20,
+                        verbose_name="Тип исполнения контейнера",
+                    ),
+                ),
+                (
+                    "fire_resistance",
+                    models.CharField(
+                        choices=[
+                            ("IV", "Группа огнестойкости IV"),
+                            ("III", "Группа огнестойкости III"),
+                            ("II", "Группа огнестойкости II"),
+                        ],
+                        default="III",
+                        max_length=10,
+                        verbose_name="Степень огнестойкости",
+                    ),
+                ),
+                (
+                    "floor_insulation_thickness",
+                    models.CharField(
+                        choices=[
+                            ("100", "100 мм"),
+                            ("150", "150 мм"),
+                            ("other", "Другое"),
+                        ],
+                        default="100",
+                        max_length=10,
+                        verbose_name="Толщина утеплителя пола",
+                    ),
+                ),
+                (
+                    "floor_sheet_thickness",
+                    models.CharField(
+                        choices=[("3", "3 мм"), ("4", "4 мм"), ("other", "Другое")],
+                        default="3",
+                        max_length=10,
+                        verbose_name="Толщина листа настила пола",
+                    ),
+                ),
+                (
+                    "bottom_sheet_thickness",
+                    models.CharField(
+                        choices=[("1.2", "1.2 мм"), ("1.5", "1.5 мм"), ("2", "2 мм")],
+                        default="1.5",
+                        max_length=10,
+                        verbose_name="Толщина подшивки дна основания",
+                    ),
+                ),
+                (
+                    "additional_floor",
+                    models.CharField(
+                        choices=[
+                            ("none", "Не требуется"),
+                            ("linoleum", "Линолеум"),
+                            ("aluminum", "Алюминиевый лист"),
+                        ],
+                        default="none",
+                        max_length=20,
+                        verbose_name="Дополнительный настил пола",
+                    ),
+                ),
+                (
+                    "roof_insulation_thickness",
+                    models.CharField(
+                        choices=[
+                            ("100", "100 мм"),
+                            ("150", "150 мм"),
+                            ("other", "Другое"),
+                        ],
+                        default="100",
+                        max_length=10,
+                        verbose_name="Толщина утеплителя крыши",
+                    ),
+                ),
+                (
+                    "roof_sheet_thickness",
+                    models.CharField(
+                        choices=[("1.2", "1.2 мм"), ("1.5", "1.5 мм"), ("2", "2 мм")],
+                        default="1.5",
+                        max_length=10,
+                        verbose_name="Толщина листа настила кровли",
+                    ),
+                ),
+                (
+                    "roof_slope",
+                    models.CharField(
+                        choices=[("sloped", "Малоуклонная"), ("flat", "Без уклона")],
+                        default="sloped",
+                        max_length=20,
+                        verbose_name="Уклон кровли",
+                    ),
+                ),
+                (
+                    "wall_insulation_thickness",
+                    models.CharField(
+                        choices=[
+                            ("100", "100 мм"),
+                            ("150", "150 мм"),
+                            ("other", "Другое"),
+                        ],
+                        default="100",
+                        max_length=10,
+                        verbose_name="Толщина утеплителя стен",
+                    ),
+                ),
+                (
+                    "wall_sheet_thickness",
+                    models.CharField(
+                        choices=[("1.2", "1.2 мм"), ("1.5", "1.5 мм"), ("2", "2 мм")],
+                        default="1.5",
+                        max_length=10,
+                        verbose_name="Толщина внешней облицовки стен",
+                    ),
+                ),
+                (
+                    "wall_panel_type",
+                    models.CharField(
+                        choices=[
+                            ("profiled", "Профилированный лист"),
+                            ("flat", "Плоская панель"),
+                        ],
+                        default="profiled",
+                        max_length=20,
+                        verbose_name="Тип внешней облицовки стен",
+                    ),
+                ),
+                (
+                    "operational_type",
+                    models.CharField(
+                        choices=[
+                            ("ground", "Наземное стационарное"),
+                            ("hanging", "Подвесное стационарное"),
+                            ("mobile", "Мобильное на шасси"),
+                        ],
+                        default="ground",
+                        max_length=20,
+                        verbose_name="Эксплуатационное исполнение",
+                    ),
+                ),
+                (
+                    "branding",
+                    models.CharField(
+                        choices=[
+                            ("required", "Требуется"),
+                            ("not_required", "Не требуется"),
+                        ],
+                        default="not_required",
+                        max_length=20,
+                        verbose_name="Брендирование (логотип)",
+                    ),
+                ),
+                (
+                    "packaging",
+                    models.CharField(
+                        choices=[
+                            ("required", "Требуется"),
+                            ("not_required", "Не требуется"),
+                        ],
+                        default="required",
+                        max_length=20,
+                        verbose_name="Упаковка в транспортную пленку",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        default="Базовая конфигурация",
+                        max_length=200,
+                        verbose_name="Название конфигурации",
+                    ),
+                ),
+                ("description", models.TextField(blank=True, verbose_name="Описание")),
+                (
+                    "base_price",
+                    models.DecimalField(
+                        decimal_places=2,
+                        default=0,
+                        max_digits=12,
+                        verbose_name="Базовая цена контейнера",
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(default=True, verbose_name="Активна"),
+                ),
+                (
+                    "is_default",
+                    models.BooleanField(
+                        default=False, verbose_name="Конфигурация по умолчанию"
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Дата создания"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Дата обновления"),
+                ),
+            ],
+            options={
+                "verbose_name": "Конфигурация контейнера",
+                "verbose_name_plural": "Конфигурации контейнеров",
+                "ordering": ["name"],
+            },
+        ),
+    ]

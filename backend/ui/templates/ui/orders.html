@@ -1,0 +1,120 @@
+{% extends "ui/base.html" %}
+{% block title %}Заказы • Diplom UI{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1>Заказы</h1>
+  <p class="muted">
+    API: <code>GET /api/orders/orders/</code>. Клиент видит только свои заказы, производитель/менеджер/админ — все.
+  </p>
+
+  <div class="row">
+    <button id="btn-load" class="secondary">Обновить список</button>
+    <label class="field inline">
+      <span>Фильтр по статусу</span>
+      <select id="status-filter">
+        <option value="">Все</option>
+        <option value="NEW">Новый</option>
+        <option value="IN_REVIEW">На рассмотрении</option>
+        <option value="APPROVED">Согласован</option>
+        <option value="IN_PRODUCTION">В производстве</option>
+        <option value="COMPLETED">Завершён</option>
+        <option value="REJECTED">Отклонён</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="orders-alert" class="alert hidden"></div>
+
+  <div class="table-wrap">
+    <table class="table" id="orders-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Номер</th>
+          <th>Статус</th>
+          <th>Сумма</th>
+          <th>Создан</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const STATUS_LABELS = {
+    NEW: "Новый",
+    IN_REVIEW: "На рассмотрении",
+    APPROVED: "Согласован",
+    IN_PRODUCTION: "В производстве",
+    COMPLETED: "Завершён",
+    REJECTED: "Отклонён",
+  };
+
+  function formatStatus(v) {
+    const key = String(v ?? "").trim().toUpperCase();
+    return STATUS_LABELS[key] || (v ?? "");
+  }
+
+  function show(type, text) {
+    const el = $("orders-alert");
+    el.className = "alert " + (type || "");
+    el.textContent = text || "";
+    el.classList.toggle("hidden", !text);
+  }
+
+  function orderNumber(o) {
+    return o.order_number || o.number || o.code || ("#" + o.id);
+  }
+
+  function escapeHtml(s) {
+    return (s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function render(list) {
+    const filter = $("status-filter").value;
+
+    const rows = (list || [])
+      .filter(o => !filter || (String(o.status || "").toUpperCase() === String(filter).toUpperCase()))
+      .map(o => {
+        const id = o.id;
+        const num = orderNumber(o);
+        const st = formatStatus(o.status || "");
+        const total = o.total_price || o.total || "";
+        const created = o.created_at || o.created || "";
+
+        return `<tr data-id="${id}">
+          <td>${id}</td>
+          <td><a href="/ui/orders/${id}/">${escapeHtml(String(num))}</a></td>
+          <td>${escapeHtml(String(st))}</td>
+          <td>${escapeHtml(String(total))}</td>
+          <td class="muted">${escapeHtml(String(created))}</td>
+        </tr>`;
+      }).join("");
+
+    $("orders-table").querySelector("tbody").innerHTML =
+      rows || `<tr><td colspan="5" class="muted">Заказов не найдено</td></tr>`;
+  }
+
+  async function load() {
+    show("", "");
+    const list = await DiplomAPI.listOrders();
+    render(list);
+    show("success", `Загружено заказов: ${(list || []).length}`);
+  }
+
+  $("btn-load").addEventListener("click", () => load().catch(e => show("danger", String(e?.message||e))));
+  $("status-filter").addEventListener("change", () => load().catch(e => show("danger", String(e?.message||e))));
+
+  load().catch(() => show("danger", "Не удалось загрузить список. Проверь логин (/ui/login/)."));
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% extends "ui/base.html" %}
+{% block title %}Заказ #{{ order_id }} • Diplom UI{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1>Заказ #{{ order_id }}</h1>
+  <p class="muted">
+    API: <code>GET /api/orders/orders/{{ order_id }}/</code>,
+    <code>GET /api/orders/orders/{{ order_id }}/history/</code>,
+    <code>POST /api/orders/orders/{{ order_id }}/change_status/</code>
+  </p>
+
+  <div class="row">
+    <button class="secondary" id="btn-reload">Обновить</button>
+
+    <!-- Контролы смены статуса (покажем только если есть права) -->
+    <div id="change-status-controls" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label class="field inline">
+        <span>Новый статус</span>
+        <select id="new-status">
+          <option value="IN_REVIEW">На рассмотрении</option>
+          <option value="APPROVED">Согласован</option>
+          <option value="IN_PRODUCTION">В производстве</option>
+          <option value="COMPLETED">Завершён</option>
+          <option value="REJECTED">Отклонён</option>
+        </select>
+      </label>
+
+      <button id="btn-change">Сменить статус</button>
+    </div>
+
+    <div id="no-rights-note" class="muted" style="display:none">
+      Смена статуса доступна только менеджеру/производителю/администратору.
+    </div>
+  </div>
+
+  <div id="detail-alert" class="alert hidden"></div>
+
+  <!-- Короткая понятная сводка -->
+  <div class="grid-2" style="margin-top:12px">
+    <div class="card" style="margin:0">
+      <h3 style="margin-top:0">Сводка заказа</h3>
+      <div class="kv">
+        <div><span>Номер</span><b id="v-number">—</b></div>
+        <div><span>Статус</span><b id="v-status">—</b></div>
+        <div><span>Сумма</span><b id="v-total">—</b></div>
+        <div><span>Создан</span><b id="v-created">—</b></div>
+        <div><span>Клиент</span><b id="v-customer">—</b></div>
+        <div><span>Email</span><b id="v-email">—</b></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin:0">
+      <h3 style="margin-top:0">История статусов</h3>
+      <div id="history-nice" class="muted">—</div>
+      <details style="margin-top:10px">
+        <summary class="muted">Показать JSON истории (для отладки)</summary>
+        <pre id="history-raw" class="code" style="margin-top:10px"></pre>
+      </details>
+    </div>
+  </div>
+
+  <!-- Таблица оборудования -->
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin-top:0">Оборудование</h3>
+    <div class="muted">Список модулей/оборудования из заявки.</div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table class="table" id="mods-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Наименование</th>
+            <th>Кол-во</th>
+            <th>Цена за ед.</th>
+            <th>Сумма</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="mods-empty" class="muted" style="display:none;margin-top:8px">Оборудование не указано.</div>
+  </div>
+
+  <!-- Таблица инженерных систем -->
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin-top:0">Инженерные системы</h3>
+    <div class="muted">Опции инженерных систем из заявки.</div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table class="table" id="eng-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Группа</th>
+            <th>Опция</th>
+            <th>Кол-во</th>
+            <th>Цена</th>
+            <th>Сумма</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="eng-empty" class="muted" style="display:none;margin-top:8px">Инженерные системы не выбраны.</div>
+  </div>
+
+  <!-- Сырой JSON для отладки (не мешает заказчику) -->
+  <details style="margin-top:12px">
+    <summary class="muted">Показать полный JSON заказа (для отладки)</summary>
+    <pre id="detail-raw" class="code" style="margin-top:10px"></pre>
+  </details>
+
+  <details style="margin-top:12px">
+    <summary class="muted">Показать snapshot (для отладки)</summary>
+    <pre id="snapshot-raw" class="code" style="margin-top:10px"></pre>
+  </details>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const ORDER_ID = {{ order_id|safe }};
+  const $ = (id) => document.getElementById(id);
+
+  const STATUS_LABELS = {
+    NEW: "Новый",
+    IN_REVIEW: "На рассмотрении",
+    APPROVED: "Согласован",
+    IN_PRODUCTION: "В производстве",
+    COMPLETED: "Завершён",
+    REJECTED: "Отклонён",
+  };
+
+  function formatStatus(v) {
+    const key = String(v ?? "").trim().toUpperCase();
+    return STATUS_LABELS[key] || (v ?? "—");
+  }
+
+  function show(type, text) {
+    const el = $("detail-alert");
+    el.className = "alert " + (type || "");
+    el.textContent = text || "";
+    el.classList.toggle("hidden", !text);
+  }
+
+  function escapeHtml(s) {
+    return (String(s ?? "")).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function toMoney(v) {
+    if (v === null || v === undefined || v === "") return "—";
+    const n = Number(String(v).replace(",", "."));
+    if (!Number.isFinite(n)) return String(v);
+    return n.toFixed(2);
+  }
+
+  function toInt(v, def = 1) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : def;
+  }
+
+  function pickSnapshot(order) {
+    return order?.snapshot || order?.order_snapshot || order?.items_snapshot || null;
+  }
+
+  // Нормализуем модули в единый формат: [{name, qty, unit_price}]
+  function normalizeModules(snap) {
+    const candidates = [
+      snap?.modules,
+      snap?.module_items,
+      snap?.items,
+      Array.isArray(snap) ? snap : null,
+    ].filter(Boolean);
+
+    const arr = candidates.find(x => Array.isArray(x)) || [];
+    return arr.map((x) => {
+      const name = x?.name ?? x?.module_name ?? x?.title ?? x?.module?.name ?? "—";
+      const qty = toInt(x?.quantity ?? x?.qty ?? x?.count ?? 1, 1);
+      const unit = x?.price ?? x?.unit_price ?? x?.unitPrice ?? x?.module_price ?? x?.price_at_selection ?? null;
+      return { name, qty, unit_price: unit };
+    });
+  }
+
+  // Нормализуем инженерку: [{group, title, qty, price}]
+  function normalizeEngineering(snap) {
+    const candidates = [
+      snap?.engineering_systems,
+      snap?.engineering,
+      snap?.engineering_items,
+    ].filter(Boolean);
+
+    const arr = candidates.find(x => Array.isArray(x)) || [];
+    return arr.map((x) => {
+      const group = x?.group ?? x?.group_title ?? x?.group_name ?? x?.engineering_group ?? "—";
+      const title = x?.title ?? x?.name ?? x?.option ?? x?.engineering_system ?? "—";
+      const qty = toInt(x?.quantity ?? x?.qty ?? 1, 1);
+      const price = x?.price ?? x?.unit_price ?? x?.price_at_selection ?? null;
+      return { group, title, qty, price };
+    });
+  }
+
+  function renderModulesTable(items) {
+    const tbody = $("mods-table").querySelector("tbody");
+    if (!items || !items.length) {
+      tbody.innerHTML = "";
+      $("mods-empty").style.display = "block";
+      return;
+    }
+    $("mods-empty").style.display = "none";
+
+    const rows = items.map((it, idx) => {
+      const unit = toMoney(it.unit_price);
+      const sum = (it.unit_price !== null && it.unit_price !== undefined && it.unit_price !== "")
+        ? toMoney(toInt(it.qty, 1) * Number(String(it.unit_price).replace(",", ".")))
+        : "—";
+
+      return `<tr>
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(it.name)}</td>
+        <td>${it.qty}</td>
+        <td>${escapeHtml(unit)}</td>
+        <td>${escapeHtml(sum)}</td>
+      </tr>`;
+    }).join("");
+
+    tbody.innerHTML = rows;
+  }
+
+  function renderEngineeringTable(items) {
+    const tbody = $("eng-table").querySelector("tbody");
+    if (!items || !items.length) {
+      tbody.innerHTML = "";
+      $("eng-empty").style.display = "block";
+      return;
+    }
+    $("eng-empty").style.display = "none";
+
+    const rows = items.map((it, idx) => {
+      const price = toMoney(it.price);
+      const sum = (it.price !== null && it.price !== undefined && it.price !== "")
+        ? toMoney(toInt(it.qty, 1) * Number(String(it.price).replace(",", ".")))
+        : "—";
+
+      return `<tr>
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(it.group)}</td>
+        <td>${escapeHtml(it.title)}</td>
+        <td>${it.qty}</td>
+        <td>${escapeHtml(price)}</td>
+        <td>${escapeHtml(sum)}</td>
+      </tr>`;
+    }).join("");
+
+    tbody.innerHTML = rows;
+  }
+
+  function renderHistoryNice(history) {
+    const arr = Array.isArray(history) ? history : (history?.results || history?.items || []);
+    if (!arr || !arr.length) {
+      $("history-nice").textContent = "История пока пустая.";
+      return;
+    }
+
+    const lines = arr.map((h) => {
+      const at = h.created_at || h.changed_at || h.timestamp || "";
+      const from = h.from_status ? formatStatus(h.from_status) : null;
+      const to = h.to_status ? formatStatus(h.to_status) : (h.status ? formatStatus(h.status) : null);
+      const who = h.changed_by || h.by || h.user || "";
+      if (from && to) return `• ${at}: ${from} → ${to} ${who ? "(" + who + ")" : ""}`;
+      if (to) return `• ${at}: ${to} ${who ? "(" + who + ")" : ""}`;
+      return `• ${at}: изменение`;
+    });
+
+    $("history-nice").textContent = lines.join("\n");
+  }
+
+  async function reload() {
+    show("", "");
+
+    const order = await DiplomAPI.getOrder(ORDER_ID);
+    const history = await DiplomAPI.getOrderHistory(ORDER_ID);
+
+    // Права на смену статуса (сервер должен отдавать can_change_status)
+    const canChange = !!order.can_change_status;
+    $("change-status-controls").style.display = canChange ? "flex" : "none";
+    $("no-rights-note").style.display = canChange ? "none" : "block";
+
+    // сводка
+    const num = order.order_number || order.number || ("#" + order.id);
+    $("v-number").textContent = String(num);
+    $("v-status").textContent = formatStatus(order.status);
+    $("v-total").textContent = toMoney(order.total_price ?? order.total);
+    $("v-created").textContent = String(order.created_at ?? order.created ?? "—");
+
+    // клиент (в snapshot может быть customer)
+    const snap = pickSnapshot(order);
+    const cust = snap?.customer || order.customer || {};
+    $("v-customer").textContent = String(cust.company_name ?? cust.company ?? cust.name ?? "—");
+    $("v-email").textContent = String(cust.email ?? order.email ?? "—");
+
+    // таблицы
+    const modules = normalizeModules(snap);
+    const engineering = normalizeEngineering(snap);
+    renderModulesTable(modules);
+    renderEngineeringTable(engineering);
+
+    // raw blocks
+    $("detail-raw").textContent = JSON.stringify(order, null, 2);
+    $("history-raw").textContent = JSON.stringify(history, null, 2);
+    $("snapshot-raw").textContent = JSON.stringify(snap, null, 2);
+
+    renderHistoryNice(history);
+
+    show("success", "Данные загружены ✅");
+  }
+
+  async function changeStatus() {
+    const status = $("new-status").value; // API ждёт англ. код
+    await DiplomAPI.changeOrderStatus(ORDER_ID, status);
+    show("success", `Статус обновлён: ${formatStatus(status)}. Обновляю...`);
+    await reload();
+  }
+
+  $("btn-reload").addEventListener("click", () => reload().catch(e => show("danger", String(e?.message||e))));
+  $("btn-change").addEventListener("click", () => changeStatus().catch(e => show("danger", String(e?.message||e))));
+
+  reload().catch(() => show("danger", "Не удалось загрузить. Проверь права/логин."));
+})();
+</script>
+{% endblock %}
