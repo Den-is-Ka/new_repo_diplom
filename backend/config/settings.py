@@ -8,11 +8,10 @@ from dotenv import load_dotenv
 # Base
 # -------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent  # .../backend
-PROJECT_DIR = BASE_DIR.parent  # .../Diplom/Diplom (корень проекта)
+PROJECT_DIR = BASE_DIR.parent  # .../container_configurator (корень проекта)
 
-# .env — только для локалки.
-# В Docker переменные уже прокинуты через compose, override=False их НЕ перетрет.
-load_dotenv(PROJECT_DIR / ".env", override=False)
+# Загружаем .env с ПЕРЕЗАПИСЬЮ существующих переменных
+load_dotenv(PROJECT_DIR / ".env", override=True)
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
 
@@ -97,26 +96,30 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # -------------------------
-# Database (DB_* primary, POSTGRES_* fallback)
+# Database — используем переменные из .env
 # -------------------------
-DB_NAME = os.getenv("DB_NAME") or os.getenv("POSTGRES_DB") or "diplom_db"
-DB_USER = os.getenv("DB_USER") or os.getenv("POSTGRES_USER") or "diplom_user"
-DB_PASSWORD = (
-    os.getenv("DB_PASSWORD") or os.getenv("POSTGRES_PASSWORD") or "diplom_pass"
-)
-DB_HOST = os.getenv("DB_HOST") or os.getenv("POSTGRES_HOST") or "localhost"
-DB_PORT = os.getenv("DB_PORT") or os.getenv("POSTGRES_PORT") or "5432"
-
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": DB_NAME,
-        "USER": DB_USER,
-        "PASSWORD": DB_PASSWORD,
-        "HOST": DB_HOST,
-        "PORT": DB_PORT,
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB'),
+        'USER': os.environ.get('POSTGRES_USER'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+        'HOST': os.environ.get('POSTGRES_HOST'),
+        'PORT': os.environ.get('POSTGRES_PORT'),
     }
 }
+
+# Для отладки — раскомментируй, чтобы увидеть значения
+print("DB_NAME:", os.environ.get('POSTGRES_DB'))
+print("DB_USER:", os.environ.get('POSTGRES_USER'))
+print("DB_PASSWORD:", os.environ.get('POSTGRES_PASSWORD'))
+
+# Для обратной совместимости (если где-то используются старые имена)
+DB_NAME = DATABASES['default']['NAME']
+DB_USER = DATABASES['default']['USER']
+DB_PASSWORD = DATABASES['default']['PASSWORD']
+DB_HOST = DATABASES['default']['HOST']
+DB_PORT = DATABASES['default']['PORT']
 
 # -------------------------
 # Password validation
@@ -145,7 +148,6 @@ STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
-# ✅ Django 5.x+: вместо STATICFILES_STORAGE используем STORAGES
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -234,20 +236,17 @@ SPECTACULAR_SETTINGS = {
 }
 
 # -------------------------
-# Email (для защиты: выводим письма в консоль)
+# Email
 # -------------------------
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@diplom.local")
 SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
-# префикс темы — удобно на защите и в логах
 EMAIL_SUBJECT_PREFIX = os.getenv("EMAIL_SUBJECT_PREFIX", "[Diplom] ")
 
-# кому слать уведомление производителю (можно поменять через .env)
 MANUFACTURER_NOTIFY_EMAIL = os.getenv(
     "MANUFACTURER_NOTIFY_EMAIL", "manufacturer@diplom.local"
 )
 
-# 🔧 полезно на будущее, если включишь реальный SMTP (чтобы не зависало)
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
